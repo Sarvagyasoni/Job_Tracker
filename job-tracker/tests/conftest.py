@@ -27,6 +27,7 @@ else:
 
 os.environ["DATABASE_URL"] = _test_url
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-tests-only")
+os.environ["JSEARCH_API_KEY"] = ""
 
 from app.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
