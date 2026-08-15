@@ -8,9 +8,16 @@ def test_search_requires_auth(client):
     assert resp.status_code == 401
 
 
-def test_search_without_configured_key_returns_clean_500(client, register_and_login):
-    """With no JSEARCH_API_KEY configured (the default in tests), the endpoint
-    should fail with a clear, actionable message rather than crashing."""
+def test_search_without_configured_key_returns_clean_500(client, register_and_login, monkeypatch):
+    """Should fail with a clear, actionable message rather than crashing,
+    when no JSEARCH_API_KEY is configured. Explicitly forces the setting to
+    None here (rather than relying on .env not having one) so this test
+    passes regardless of whether the developer running it happens to have a
+    real key configured locally."""
+    import app.services.job_search as job_search_module
+
+    monkeypatch.setattr(job_search_module.settings, "jsearch_api_key", None)
+
     _, headers = register_and_login()
     resp = client.get("/jobs/search", params={"query": "backend developer"}, headers=headers)
     assert resp.status_code == 500

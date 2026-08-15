@@ -42,7 +42,7 @@ class Job(Base):
 
     company = Column(String, nullable=False)
     role = Column(String, nullable=True)
-    status = Column(SAEnum(JobStatus, name="job_status"), nullable=False, default=JobStatus.applied)
+    status = Column(SAEnum(JobStatus, name="job_status"), nullable=False, default=JobStatus.applied, index=True)
     date_applied = Column(Date, nullable=True, default=date.today)
     link = Column(String, nullable=True)
     notes = Column(Text, nullable=True)

@@ -26,9 +26,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(subject: str, expires_minutes: Optional[int] = None) -> str:
     """subject is typically the user's id (as a string)."""
+    now = datetime.now(timezone.utc)
     expire_delta = timedelta(minutes=expires_minutes or settings.jwt_expire_minutes)
-    expire = datetime.now(timezone.utc) + expire_delta
-    to_encode = {"sub": subject, "exp": expire}
+    expire = now + expire_delta
+    to_encode = {"sub": subject, "iat": now, "exp": expire}
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 

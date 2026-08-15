@@ -17,7 +17,18 @@ class Settings(BaseSettings):
     # API). Left optional so the app still starts up fine without it configured yet.
     jsearch_api_key: Optional[str] = None
 
+    # Comma-separated list of frontend origins allowed to call this API from
+    # a browser. Defaults cover the two most common local React dev servers
+    # (Vite and Create React App) so it works out of the box; add your
+    # teammate's actual dev URL (and later, your deployed frontend URL) here
+    # once known.
+    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 settings = Settings()

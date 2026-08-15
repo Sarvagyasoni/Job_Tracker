@@ -36,6 +36,9 @@ requirements.txt
 - `POST /auth/register` — `{ "email", "password" }` → creates a user
 - `POST /auth/login` — `{ "email", "password" }` → `{ "access_token", "token_type" }`
 
+Both are rate-limited to 5 requests/minute per IP to slow down brute-force
+credential guessing. Exceeding it returns `429 Too Many Requests`.
+
 All routes below require `Authorization: Bearer <token>`.
 
 **Jobs** (always scoped to the authenticated user)
@@ -104,6 +107,22 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 
 If you skip this, the rest of the app works fine — `GET /jobs/search` will
 just return a clear `500` explaining the key is missing, until you add it.
+
+### 3b. Frontend access (CORS)
+
+By default, only `http://localhost:5173` (Vite) and `http://localhost:3000`
+(Create React App) can call this API from a browser. If your teammate's
+frontend runs somewhere else, add it to `CORS_ORIGINS` in `.env` as a
+comma-separated list:
+
+```
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost:8080
+```
+
+Once you deploy the frontend somewhere real, add that URL too (comma-
+separated alongside the local ones, or replace them entirely for a
+production-only deploy). If a frontend gets a CORS error in the browser
+console, this is almost always the fix.
 
 ### 4. Create the database
 
