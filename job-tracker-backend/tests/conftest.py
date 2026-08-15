@@ -27,10 +27,19 @@ else:
 
 os.environ["DATABASE_URL"] = _test_url
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-tests-only")
-os.environ["JSEARCH_API_KEY"] = ""
 
 from app.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
+from app.rate_limit import limiter  # noqa: E402
+
+# Disable rate limiting for tests. The suite legitimately calls
+# /auth/register and /auth/login far more than 5x/minute across its many
+# test cases (each test registers its own user), which isn't the scenario
+# rate limiting is meant to guard against - that's brute-force credential
+# guessing in production, not fast, isolated, correctly-authenticated test
+# runs. Rate limiting itself is verified directly and separately in
+# tests/test_auth.py.
+limiter.enabled = False
 
 engine = create_engine(_test_url)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
