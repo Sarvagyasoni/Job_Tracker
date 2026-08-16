@@ -36,3 +36,14 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Node.js / Frontend
+node_modules/
+job-tracker-frontend/dist/
+job-tracker-frontend/dist-ssr/
+job-tracker-frontend/*.local
+
+# Temporary files
+temp.json
+*.tmp
+*.temp
