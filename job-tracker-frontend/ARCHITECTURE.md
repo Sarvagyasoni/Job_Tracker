@@ -16,6 +16,11 @@ src/
 └── utils/            # Helpers (error parsing, date formatting, validation)
 ```
 
+## UI Design System
+- **Frosted Glass Inputs**: Auth forms use glassmorphism with `backdrop-filter: blur(20px)`, semi-transparent backgrounds, and layered shadows
+- **Password Toggle**: Input component supports show/hide password with icon button
+- **Responsive Cards**: Auth card scales from square (mobile) to 4:3 (tablet) to larger square (desktop)
+
 ## Data Flow
 ```
 User Action → Component → Hook → API Layer → Backend
@@ -27,6 +32,10 @@ User Action → Component → Hook → API Layer → Backend
 - **axiosInstance**: Configured with baseURL, interceptors for auth headers, error normalization
 - **endpoints.ts**: Typed functions for each backend endpoint
 - **Error handling**: Normalizes backend errors to consistent format
+  - 400: Uses first validation error as main message, maps field errors
+  - 401: On auth endpoints returns backend message; on protected routes clears token and redirects
+  - 404/403/429/500: User-friendly messages with status codes
+  - Network/timeout: Offline-friendly messaging
 
 ### Endpoints
 | Method | Path | Description |

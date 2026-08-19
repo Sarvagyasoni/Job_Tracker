@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../auth';
 import { useJobs } from '../hooks';
 import { Button, Modal, useToast } from '../components/common';
@@ -11,6 +11,10 @@ export function Dashboard() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const { jobs, isLoading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
 
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);

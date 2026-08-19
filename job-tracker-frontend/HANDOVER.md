@@ -59,6 +59,8 @@ VITE_API_URL=http://localhost:8000
 - **Error Handling**: User-friendly messages for 401, 403, 404, validation, network, server errors
 - **Responsive Layout**: Desktop (horizontal kanban), tablet/mobile (vertical stack)
 - **Dark Mode**: Consistent theming across all components via CSS variables
+- **Frosted Glass Auth Forms**: Glassmorphism inputs with backdrop blur, password visibility toggle
+- **Improved Error Handling**: First validation error as primary message; auth 401 returns backend message
 
 ## Phase 3 Features Implemented
 - **Job Search Interface**: Search external job boards via GET /jobs/search
