@@ -50,9 +50,10 @@
 
 ## Frontend Must Handle
 - Token expiry (401) → auto-logout + redirect to login
+- **Auth endpoint 401** → show backend error message (no redirect)
 - Rate limit (429) → user-friendly message with retry guidance
 - Network errors → offline-friendly messaging
-- Validation errors (400) → field-level inline errors
+- Validation errors (400) → field-level inline errors + first error in toast
 - Empty states (no jobs, no search results)
 
 ## Performance Budgets
