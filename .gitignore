@@ -22,9 +22,6 @@ dist/
 .coverage
 htmlcov/
 
-# Alembic (keep versions/, ignore local scratch files only)
-# (nothing to ignore here currently — versions/ should be committed)
-
 # Editor/IDE
 .vscode/
 .idea/
@@ -47,3 +44,8 @@ job-tracker-frontend/*.local
 temp.json
 *.tmp
 *.temp
+
+# Backend specific
+job-tracker-backend/__pycache__/
+job-tracker-backend/.pytest_cache/
+job-tracker-backend/*.egg-info/
