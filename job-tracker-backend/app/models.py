@@ -32,6 +32,30 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     jobs = relationship("Job", back_populates="owner", cascade="all, delete-orphan")
+    resume = relationship(
+        "Resume", back_populates="owner", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class Resume(Base):
+    """One resume per user. Stores only the extracted plain text (not the
+    raw file bytes) - that's all the ATS scoring and bullet-tailoring
+    features actually need, and it avoids the added complexity of file
+    storage. Uploading a new resume replaces the existing one."""
+
+    __tablename__ = "resumes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+
+    original_filename = Column(String, nullable=False)
+    extracted_text = Column(Text, nullable=False)
+
+    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    owner = relationship("User", back_populates="resume")
 
 
 class Job(Base):

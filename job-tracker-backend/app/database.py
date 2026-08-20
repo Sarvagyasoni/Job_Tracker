@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     # Optional: only required to use GET /jobs/search (OpenWeb Ninja JSearch
     # API). Left optional so the app still starts up fine without it configured yet.
     jsearch_api_key: Optional[str] = None
-
+    # Optional: only required for the ATS scoring and resume bullet-tailoring
+    # endpoints (POST /resume/ats-score, POST /resume/tailor-bullets).
+    gemini_api_key: Optional[str] = None
+    gemini_model: str = "gemini-2.5-flash"
     # Comma-separated list of frontend origins allowed to call this API from
     # a browser. Defaults cover the two most common local React dev servers
     # (Vite and Create React App) so it works out of the box; add your

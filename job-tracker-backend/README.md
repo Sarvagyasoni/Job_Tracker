@@ -53,6 +53,25 @@ All routes below require `Authorization: Bearer <token>`.
   `POST /jobs` to add it to your tracked list. Requires `JSEARCH_API_KEY` to be
   set (see below); returns a clear 500 error if it isn't configured.
 
+**Resume & AI features** (always scoped to the authenticated user)
+- `POST /resume` — upload a resume (PDF or DOCX, 5MB max) as `multipart/form-data`
+  with a `file` field. Only the extracted text is stored, not the file itself.
+  Uploading again replaces your existing resume (one per user).
+- `GET /resume` — see your saved resume's filename and upload date
+- `DELETE /resume`
+- `POST /resume/ats-score` — `{ "job_description" }` → compares your saved
+  resume against the job description using Gemini, returning a 0-100 match
+  score, matched/missing keywords, and a short summary. Requires a resume to
+  already be uploaded (404 if not).
+- `POST /resume/tailor-bullets` — `{ "bullet_points": [...], "job_description" }`
+  → rewrites each bullet point to better highlight skills relevant to the job
+  description, without inventing new experience. Doesn't require a saved
+  resume — bullets are passed directly, so this also works for drafting new
+  ones from scratch.
+
+Both AI endpoints are rate-limited to 10 requests/minute per IP, and require
+`GEMINI_API_KEY` to be set (see below); return a clear 500 if it isn't.
+
 Errors: `401` for missing/invalid auth, `404` for a job that doesn't exist
 or belongs to another user, `400` for invalid input (missing `company`,
 bad `status`, bad date format, etc.).
@@ -107,6 +126,19 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 
 If you skip this, the rest of the app works fine — `GET /jobs/search` will
 just return a clear `500` explaining the key is missing, until you add it.
+
+### 3a-2. (Optional) Enable ATS scoring and bullet tailoring
+
+`POST /resume/ats-score` and `POST /resume/tailor-bullets` need a Gemini
+API key:
+
+1. Go to [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) and sign in with a Google account
+2. Create an API key
+3. Set `GEMINI_API_KEY=...` in your `.env`
+
+`GEMINI_MODEL` defaults to `gemini-2.5-flash` — change it in `.env` if
+you want a different model. If you skip the key, both endpoints return a
+clear `500` explaining what's missing, same as job search.
 
 ### 3b. Frontend access (CORS)
 
