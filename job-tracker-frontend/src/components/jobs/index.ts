@@ -5,3 +5,4 @@ export { KanbanBoard } from './KanbanBoard';
 export { KanbanColumn } from './KanbanColumn';
 export { JobSearch } from './JobSearch';
 export { JobSearchResultCard } from './JobSearchResultCard';
+export { ResumeManager } from './ResumeManager';
