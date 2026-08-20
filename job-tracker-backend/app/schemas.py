@@ -126,3 +126,67 @@ class JobSearchResponse(BaseModel):
     query: str
     page: int
     results: list[JobSearchResult]
+
+
+# ---------- Resume ----------
+
+class ResumeOut(BaseModel):
+    id: int
+    original_filename: str
+    uploaded_at: datetime
+    # Deliberately omits extracted_text - it can be long, and the caller
+    # generally only needs confirmation a resume exists plus its metadata,
+    # not the full text echoed back.
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------- ATS compatibility scoring ----------
+
+class ATSScoreRequest(BaseModel):
+    job_description: str
+
+    @field_validator("job_description")
+    @classmethod
+    def job_description_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("job_description is required")
+        return v.strip()
+
+
+class ATSScoreResponse(BaseModel):
+    match_score: int  # 0-100
+    matched_keywords: list[str]
+    missing_keywords: list[str]
+    summary: str
+
+
+# ---------- Resume bullet tailoring ----------
+
+class TailorBulletsRequest(BaseModel):
+    bullet_points: list[str]
+    job_description: str
+
+    @field_validator("bullet_points")
+    @classmethod
+    def bullets_not_empty(cls, v: list[str]) -> list[str]:
+        cleaned = [b.strip() for b in v if b and b.strip()]
+        if not cleaned:
+            raise ValueError("at least one non-empty bullet_point is required")
+        return cleaned
+
+    @field_validator("job_description")
+    @classmethod
+    def job_description_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("job_description is required")
+        return v.strip()
+
+
+class TailoredBullet(BaseModel):
+    original: str
+    tailored: str
+
+
+class TailorBulletsResponse(BaseModel):
+    results: list[TailoredBullet]
