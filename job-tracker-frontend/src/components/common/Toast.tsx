@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './Toast.module.css';
+import { ToastContext } from './ToastContextType';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -16,12 +17,10 @@ interface ToastProviderProps {
   children: ReactNode;
 }
 
-interface ToastContextType {
+export interface ToastContextType {
   toast: (toast: Omit<Toast, 'id'>) => string;
   dismiss: (id: string) => void;
 }
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -45,13 +44,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
   );
 }
 
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
-}
+
 
 function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
   return createPortal(

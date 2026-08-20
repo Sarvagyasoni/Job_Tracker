@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
+import { useState, useEffect, type ReactNode, useCallback } from 'react';
 import type { User } from '../types';
 import { authApi } from '../api';
+import { AuthContext } from './AuthContextType';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
@@ -12,8 +13,6 @@ interface AuthContextType {
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function decodeToken(token: string): { sub: string } | null {
   try {
@@ -32,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     const storedToken = localStorage.getItem('access_token');
+    const storedEmail = localStorage.getItem('user_email');
     if (!storedToken) {
       setIsLoading(false);
       return;
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (decoded?.sub) {
       setUser({
         id: parseInt(decoded.sub, 10),
-        email: '',
+        email: storedEmail || '',
         created_at: new Date().toISOString(),
       });
     }
@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.login({ email, password });
       const { access_token } = response.data;
       localStorage.setItem('access_token', access_token);
+      localStorage.setItem('user_email', email);
       setToken(access_token);
       const decoded = decodeToken(access_token);
       if (decoded?.sub) {
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const loginResponse = await authApi.login({ email, password });
       const { access_token } = loginResponse.data;
       localStorage.setItem('access_token', access_token);
+      localStorage.setItem('user_email', email);
       setToken(access_token);
       setUser(response.data);
       return { success: true };
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('user_email');
     setToken(null);
     setUser(null);
   };
@@ -113,10 +116,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}

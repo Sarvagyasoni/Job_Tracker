@@ -9,6 +9,9 @@ import type {
   JobFilters,
   LoginCredentials,
   RegisterData,
+  ResumeOut,
+  ATSScoreResponse,
+  TailorBulletsResponse,
 } from '../types';
 
 export const authApi = {
@@ -46,4 +49,29 @@ export const jobsApi = {
     });
     return axiosInstance.get<JobSearchResponse>(`/jobs/search?${params}`);
   },
+};
+
+export const resumeApi = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axiosInstance.post<ResumeOut>('/resume', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  get: () =>
+    axiosInstance.get<ResumeOut>('/resume'),
+
+  delete: () =>
+    axiosInstance.delete('/resume'),
+
+  atsScore: (jobDescription: string) =>
+    axiosInstance.post<ATSScoreResponse>('/resume/ats-score', { job_description: jobDescription }),
+
+  tailorBullets: (bulletPoints: string[], jobDescription: string) =>
+    axiosInstance.post<TailorBulletsResponse>('/resume/tailor-bullets', {
+      bullet_points: bulletPoints,
+      job_description: jobDescription,
+    }),
 };
