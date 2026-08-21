@@ -14,7 +14,7 @@ from app.schemas import (
     TailorBulletsRequest,
     TailorBulletsResponse,
 )
-from app.services.llm_client import score_resume_against_job, tailor_bullet_points
+from app.services.llm_client import generate_tailored_bullets, score_resume_against_job
 from app.services.resume_parser import extract_resume_text
 
 router = APIRouter(prefix="/resume", tags=["resume"])
@@ -104,11 +104,12 @@ def ats_score(
 def tailor_bullets(
     request: Request,
     payload: TailorBulletsRequest,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Rewrites the given resume bullet points to highlight skills relevant
-    to the given job description. Does not require a saved resume - bullets
-    are passed directly in the request, so this also works for someone
-    drafting new bullets from scratch."""
-    results = tailor_bullet_points(payload.bullet_points, payload.job_description)
-    return TailorBulletsResponse(results=results)
+    """Generates resume bullet points from the user's saved resume,
+    tailored to highlight skills relevant to the given job description.
+    Requires a resume to already be uploaded (404 if not)."""
+    resume = _get_own_resume_or_404(db, current_user)
+    bullets = generate_tailored_bullets(resume.extracted_text, payload.job_description)
+    return TailorBulletsResponse(bullets=bullets)

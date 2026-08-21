@@ -89,6 +89,38 @@ def test_upload_pdf_resume_success(client, register_and_login):
     assert resp.json()["original_filename"] == "resume.pdf"
 
 
+def test_upload_pdf_with_generic_content_type_still_succeeds(client, register_and_login):
+    """Regression test: some clients (Postman on certain OS/file-association
+    setups, curl without an explicit -H, etc.) send a generic
+    'application/octet-stream' Content-Type even for a real, valid PDF.
+    File type validation must rely on the extension + actual file bytes,
+    not the client-supplied Content-Type header, or real files get
+    incorrectly rejected."""
+    _, headers = register_and_login()
+    pdf_bytes = _make_pdf_bytes(SAMPLE_RESUME_LINES)
+
+    resp = client.post(
+        "/resume",
+        headers=headers,
+        files={"file": ("resume.pdf", pdf_bytes, "application/octet-stream")},
+    )
+    assert resp.status_code == 201, resp.text
+
+
+def test_upload_renamed_file_rejected_by_magic_bytes(client, register_and_login):
+    """A .txt file renamed to .pdf should still be rejected, since the
+    actual bytes don't start with the PDF signature - extension alone
+    isn't trusted either."""
+    _, headers = register_and_login()
+
+    resp = client.post(
+        "/resume",
+        headers=headers,
+        files={"file": ("fake.pdf", b"just plain text, not a real pdf", "application/pdf")},
+    )
+    assert resp.status_code == 400
+
+
 def test_upload_wrong_file_type_rejected(client, register_and_login):
     _, headers = register_and_login()
     resp = client.post(
@@ -300,22 +332,39 @@ def test_ats_score_success_with_mocked_llm(client, register_and_login):
     assert "Kubernetes" in body["missing_keywords"]
 
 
-# ---------- bullet tailoring ----------
+# ---------- bullet generation ----------
 
 
 def test_tailor_bullets_requires_auth(client):
     resp = client.post(
         "/resume/tailor-bullets",
-        json={"bullet_points": ["Built APIs"], "job_description": "Backend role"},
+        json={"job_description": "Backend role"},
     )
     assert resp.status_code == 401
 
 
-def test_tailor_bullets_empty_list_rejected(client, register_and_login):
+def test_tailor_bullets_without_resume_returns_404(client, register_and_login):
+    """Unlike the old bullets-passed-directly design, generating bullets
+    now reads from the saved resume, so one must exist first."""
     _, headers = register_and_login()
     resp = client.post(
         "/resume/tailor-bullets",
-        json={"bullet_points": [], "job_description": "Backend role"},
+        json={"job_description": "Backend role"},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+
+
+def test_tailor_bullets_blank_job_description_rejected(client, register_and_login):
+    _, headers = register_and_login()
+    pdf_bytes = _make_pdf_bytes(SAMPLE_RESUME_LINES)
+    client.post(
+        "/resume", headers=headers, files={"file": ("resume.pdf", pdf_bytes, "application/pdf")}
+    )
+
+    resp = client.post(
+        "/resume/tailor-bullets",
+        json={"job_description": "   "},
         headers=headers,
     )
     assert resp.status_code == 400
@@ -329,36 +378,65 @@ def test_tailor_bullets_without_configured_key_returns_clean_500(
     monkeypatch.setattr(llm_module.settings, "gemini_api_key", None)
 
     _, headers = register_and_login()
+    pdf_bytes = _make_pdf_bytes(SAMPLE_RESUME_LINES)
+    client.post(
+        "/resume", headers=headers, files={"file": ("resume.pdf", pdf_bytes, "application/pdf")}
+    )
+
     resp = client.post(
         "/resume/tailor-bullets",
-        json={"bullet_points": ["Built REST APIs"], "job_description": "Backend role"},
+        json={"job_description": "Backend role"},
         headers=headers,
     )
     assert resp.status_code == 500
     assert "GEMINI_API_KEY" in resp.json()["detail"]
 
 
-def test_tailor_bullets_does_not_require_a_saved_resume(client, register_and_login):
-    """Unlike ATS scoring, bullets are passed directly in the request, so
-    this should work even for a user with no resume on file."""
+def test_tailor_bullets_success_generates_from_resume(client, register_and_login):
     _, headers = register_and_login()
+    pdf_bytes = _make_pdf_bytes(SAMPLE_RESUME_LINES)
+    client.post(
+        "/resume", headers=headers, files={"file": ("resume.pdf", pdf_bytes, "application/pdf")}
+    )
 
-    with patch("app.routers.resume.tailor_bullet_points") as mock_tailor:
-        from app.schemas import TailoredBullet
-
-        mock_tailor.return_value = [
-            TailoredBullet(
-                original="Built REST APIs",
-                tailored="Built and shipped RESTful APIs using FastAPI",
-            )
+    with patch("app.routers.resume.generate_tailored_bullets") as mock_generate:
+        mock_generate.return_value = [
+            "Built and shipped RESTful APIs using FastAPI and PostgreSQL",
+            "Implemented JWT-based authentication for a multi-user platform",
         ]
 
         resp = client.post(
             "/resume/tailor-bullets",
-            json={"bullet_points": ["Built REST APIs"], "job_description": "Backend role"},
+            json={"job_description": "Backend role requiring FastAPI and PostgreSQL"},
             headers=headers,
         )
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert len(body["results"]) == 1
-    assert body["results"][0]["original"] == "Built REST APIs"
+    assert len(body["bullets"]) == 2
+    assert "FastAPI" in body["bullets"][0]
+
+    # Confirm the saved resume's actual text was passed through, not
+    # something else
+    call_args = mock_generate.call_args[0]
+    assert "Backend Software Engineer" in call_args[0] or "Jane Doe" in call_args[0]
+    assert call_args[1] == "Backend role requiring FastAPI and PostgreSQL"
+
+
+def test_tailor_bullets_cannot_read_another_users_resume(client, register_and_login):
+    """Bullet generation must use the CALLER's own resume, never another
+    user's, even though the resume isn't referenced by id in the URL."""
+    _, headers1 = register_and_login(email=email("bulletsowner"))
+    _, headers2 = register_and_login(email=email("bulletsother"))
+
+    pdf_bytes = _make_pdf_bytes(["Jane Doe", "Wrote extremely secret proprietary things"])
+    client.post(
+        "/resume", headers=headers1, files={"file": ("resume.pdf", pdf_bytes, "application/pdf")}
+    )
+
+    # user2 has no resume of their own - should 404, not somehow use user1's
+    resp = client.post(
+        "/resume/tailor-bullets",
+        json={"job_description": "Backend role"},
+        headers=headers2,
+    )
+    assert resp.status_code == 404

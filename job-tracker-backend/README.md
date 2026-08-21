@@ -63,11 +63,10 @@ All routes below require `Authorization: Bearer <token>`.
   resume against the job description using Gemini, returning a 0-100 match
   score, matched/missing keywords, and a short summary. Requires a resume to
   already be uploaded (404 if not).
-- `POST /resume/tailor-bullets` — `{ "bullet_points": [...], "job_description" }`
-  → rewrites each bullet point to better highlight skills relevant to the job
-  description, without inventing new experience. Doesn't require a saved
-  resume — bullets are passed directly, so this also works for drafting new
-  ones from scratch.
+- `POST /resume/tailor-bullets` — `{ "job_description" }` → generates 5-8
+  resume bullet points from your saved resume, tailored to highlight skills
+  relevant to the job description, without inventing new experience. Requires
+  a resume to already be uploaded (404 if not) — same as ATS scoring.
 
 Both AI endpoints are rate-limited to 10 requests/minute per IP, and require
 `GEMINI_API_KEY` to be set (see below); return a clear 500 if it isn't.

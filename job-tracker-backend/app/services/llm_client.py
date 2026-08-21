@@ -21,7 +21,7 @@ from google.genai import errors, types
 from pydantic import ValidationError
 
 from app.database import settings
-from app.schemas import ATSScoreResponse, TailoredBullet
+from app.schemas import ATSScoreResponse
 
 _MAX_RESUME_CHARS = 15000  # generous - a resume is rarely more than a few thousand words
 _MAX_JOB_DESCRIPTION_CHARS = 8000
@@ -128,27 +128,30 @@ def score_resume_against_job(resume_text: str, job_description: str) -> dict:
     return parsed.model_dump()
 
 
-def tailor_bullet_points(bullet_points: list[str], job_description: str) -> list[TailoredBullet]:
+def generate_tailored_bullets(resume_text: str, job_description: str) -> list[str]:
+    """Reads the user's saved resume and generates 5-8 achievement-oriented
+    bullet points relevant to the given job description, grounded strictly
+    in experience/skills actually present in the resume."""
     api_key = _require_api_key()
 
+    resume_text = resume_text[:_MAX_RESUME_CHARS]
     job_description = job_description[:_MAX_JOB_DESCRIPTION_CHARS]
-    bullets_block = "\n".join(f"{i + 1}. {b}" for i, b in enumerate(bullet_points))
 
     system_prompt = (
-        "You are a resume writing assistant. Rewrite each given resume bullet "
-        "point to better highlight skills and terminology relevant to the given "
-        "job description. Do NOT invent new experience, tools, metrics, or "
-        "achievements that aren't implied by the original bullet - only "
-        "rephrase, reframe emphasis, and use terminology that matches the job "
-        "description where it's honestly applicable. Return one object per "
-        "bullet, in the same order as given, with 'original' set to the exact "
-        "original bullet text and 'tailored' set to the rewritten version."
+        "You are a resume writing assistant. Read the given resume and generate "
+        "5 to 8 strong, achievement-oriented resume bullet points that highlight "
+        "the candidate's skills and experience most relevant to the given job "
+        "description. Ground every bullet strictly in experience, projects, "
+        "tools, and skills that are actually present in the resume - do NOT "
+        "invent companies, roles, tools, metrics, or achievements that aren't "
+        "implied by the resume content. Use strong action verbs, and quantify "
+        "impact only where the resume itself supports a specific number. "
+        "Return a JSON array of strings, one per bullet point, with no other "
+        "text."
     )
-    user_prompt = f"JOB DESCRIPTION:\n{job_description}\n\nBULLET POINTS:\n{bullets_block}"
+    user_prompt = f"RESUME:\n{resume_text}\n\nJOB DESCRIPTION:\n{job_description}"
 
-    raw = _call_gemini(
-        api_key, system_prompt, user_prompt, response_schema=list[TailoredBullet]
-    )
+    raw = _call_gemini(api_key, system_prompt, user_prompt, response_schema=list[str])
 
     try:
         parsed_data = json.loads(raw)
@@ -158,16 +161,12 @@ def tailor_bullet_points(bullet_points: list[str], job_description: str) -> list
             detail="AI provider returned an unreadable response. Please try again.",
         )
 
-    if not isinstance(parsed_data, list) or len(parsed_data) != len(bullet_points):
+    if not isinstance(parsed_data, list) or not parsed_data or not all(
+        isinstance(b, str) and b.strip() for b in parsed_data
+    ):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="AI provider returned a mismatched number of results. Please try again.",
+            detail="AI provider returned an unexpected response format. Please try again.",
         )
 
-    try:
-        return [TailoredBullet.model_validate(item) for item in parsed_data]
-    except ValidationError:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="AI provider returned an incomplete response. Please try again.",
-        )
+    return parsed_data
