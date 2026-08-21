@@ -11,9 +11,11 @@ export const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -37,7 +39,7 @@ function normalizeError(error: AxiosError): ApiError {
   if (status === 400 && responseData?.detail) {
     const fieldErrors: Record<string, string> = {};
     const details = responseData.detail as Array<{ loc?: (string | number)[]; msg?: string }> | undefined;
-    
+
     if (Array.isArray(details)) {
       for (const err of details) {
         const field = err.loc?.[1] as string || 'form';
@@ -67,8 +69,10 @@ function normalizeError(error: AxiosError): ApiError {
         status,
       };
     }
-    localStorage.removeItem('access_token');
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+      window.location.href = '/login';
+    }
     return {
       message: 'Session expired. Please log in again.',
       status,
@@ -91,7 +95,9 @@ function normalizeError(error: AxiosError): ApiError {
 
   if (status && status >= 500) {
     return {
-      message: 'Server error. Please try again later.',
+      // Prefer the backend's detail (e.g. "GEMINI_API_KEY is missing") over a
+      // generic message - the API only sends actionable details on purpose.
+      message: (responseData?.detail as string) || 'Server error. Please try again later.',
       status,
     };
   }

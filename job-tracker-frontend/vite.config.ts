@@ -21,6 +21,18 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/resume': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            // Ensure Content-Type with boundary is forwarded for multipart/form-data
+            if (req.headers['content-type']?.startsWith('multipart/form-data')) {
+              proxyReq.setHeader('Content-Type', req.headers['content-type']);
+            }
+          });
+        },
+      },
       '/health': {
         target: 'http://localhost:8000',
         changeOrigin: true,
