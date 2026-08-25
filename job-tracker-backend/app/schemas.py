@@ -128,6 +128,12 @@ class JobSearchResponse(BaseModel):
     results: list[JobSearchResult]
 
 
+class SuggestedJobsResponse(BaseModel):
+    generated_query: str
+    page: int
+    results: list[JobSearchResult]
+
+
 # ---------- Resume ----------
 
 class ResumeOut(BaseModel):

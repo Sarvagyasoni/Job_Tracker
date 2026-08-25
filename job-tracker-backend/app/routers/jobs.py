@@ -1,13 +1,16 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import Job, JobStatus, User
-from app.schemas import JobCreate, JobOut, JobSearchResponse, JobUpdate
+from app.rate_limit import limiter
+from app.routers.resume import _get_own_resume_or_404
+from app.schemas import JobCreate, JobOut, JobSearchResponse, JobUpdate, SuggestedJobsResponse
 from app.services.job_search import search_jobs
+from app.services.llm_client import generate_job_search_query
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -50,6 +53,27 @@ async def search_jobs_endpoint(
     to your tracked list."""
     results = await search_jobs(query=query, page=page, remote_only=remote_only)
     return JobSearchResponse(query=query, page=page, results=results)
+
+
+# NOTE: also registered BEFORE @router.get("/{job_id}") for the same reason
+# as /search above - "/jobs/suggested" would otherwise be misrouted as
+# job_id="suggested".
+@router.get("/suggested", response_model=SuggestedJobsResponse)
+@limiter.limit("10/minute")
+async def suggested_jobs_endpoint(
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reads the user's saved resume, has Gemini generate a search query
+    representing their strongest role, then runs that query against the
+    same live job board /jobs/search uses. Requires a resume to already be
+    uploaded (404 if not)."""
+    resume = _get_own_resume_or_404(db, current_user)
+    generated_query = generate_job_search_query(resume.extracted_text)
+    results = await search_jobs(query=generated_query, page=page)
+    return SuggestedJobsResponse(generated_query=generated_query, page=page, results=results)
 
 
 @router.get("/{job_id}", response_model=JobOut)

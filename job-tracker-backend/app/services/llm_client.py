@@ -18,7 +18,7 @@ import json
 from fastapi import HTTPException, status
 from google import genai
 from google.genai import errors, types
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.database import settings
 from app.schemas import ATSScoreResponse
@@ -170,3 +170,51 @@ def generate_tailored_bullets(resume_text: str, job_description: str) -> list[st
         )
 
     return parsed_data
+
+
+class _SearchQuery(BaseModel):
+    """Internal-only wrapper, not part of the public API schemas. Gemini's
+    structured output mode is more reliable with an object at the top level
+    than a bare string, even though the SDK doesn't reject a bare-string
+    schema outright."""
+
+    query: str
+
+
+def generate_job_search_query(resume_text: str) -> str:
+    """Reads the user's resume and generates a single, effective job-board
+    search query (role + key skills) representing their strongest,
+    most marketable position - used to auto-populate GET /jobs/suggested
+    without the user having to type anything themselves."""
+    api_key = _require_api_key()
+
+    resume_text = resume_text[:_MAX_RESUME_CHARS]
+
+    system_prompt = (
+        "You are a job search assistant. Read the given resume and produce a "
+        "single, effective job board search query (2-6 words - typically a "
+        "job title plus 1-2 key skills, e.g. 'Backend Software Engineer "
+        "Python FastAPI') that best represents this candidate's strongest, "
+        "most marketable role based on their actual experience. This query "
+        "will be used verbatim to search a live job board, so keep it "
+        "concise and realistic - not a full sentence, not a list."
+    )
+    user_prompt = f"RESUME:\n{resume_text}"
+
+    raw = _call_gemini(api_key, system_prompt, user_prompt, response_schema=_SearchQuery)
+
+    try:
+        parsed = _SearchQuery.model_validate_json(raw)
+    except (ValidationError, json.JSONDecodeError):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI provider returned an unreadable response. Please try again.",
+        )
+
+    query = parsed.query.strip()
+    if not query:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI provider returned an empty search query. Please try again.",
+        )
+    return query

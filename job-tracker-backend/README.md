@@ -52,6 +52,11 @@ All routes below require `Authorization: Bearer <token>`.
   automatically — pass a result's `company`/`role`/`link`/`notes` fields into
   `POST /jobs` to add it to your tracked list. Requires `JSEARCH_API_KEY` to be
   set (see below); returns a clear 500 error if it isn't configured.
+- `GET /jobs/suggested?page=1` — like `/jobs/search`, but you don't provide a
+  query yourself. Gemini reads your saved resume, generates a search query
+  representing your strongest role, then runs it against the same job board.
+  Requires both a saved resume (404 if none) and `GEMINI_API_KEY` (500 if
+  missing).
 
 **Resume & AI features** (always scoped to the authenticated user)
 - `POST /resume` — upload a resume (PDF or DOCX, 5MB max) as `multipart/form-data`
