@@ -47,3 +47,12 @@ job-tracker-frontend/*.local
 temp.json
 *.tmp
 *.temp
+.vscode
+.git
+.github
+.pytest_cache
+docker-compose.yml
+openapi.json
+reg.json
+test_login.json
+test_reg.json

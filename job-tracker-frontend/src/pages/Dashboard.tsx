@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../auth';
 import { useJobs } from '../hooks';
 import { Button, Modal, useToast } from '../components/common';
-import { KanbanBoard, JobForm, JobSearch } from '../components/jobs';
+import { KanbanBoard, JobForm, JobSearch, ResumeManager } from '../components/jobs';
 import type { Job, JobCreate, JobUpdate, JobSearchResult } from '../types';
 import { format } from 'date-fns';
 import styles from './Dashboard.module.css';
@@ -12,6 +12,10 @@ export function Dashboard() {
   const { jobs, isLoading, error, fetchJobs, createJob, updateJob, deleteJob } = useJobs();
   const { toast } = useToast();
 
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
@@ -20,6 +24,7 @@ export function Dashboard() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeView, setActiveView] = useState<'jobs' | 'resume'>('jobs');
 
   const handleCreate = useCallback(async (data: JobCreate | JobUpdate) => {
     setIsSubmitting(true);
@@ -141,17 +146,51 @@ export function Dashboard() {
         </div>
       </div>
 
-      <KanbanBoard
-        jobs={jobs}
-        isLoading={isLoading || authLoading}
-        error={error}
-        onRefresh={fetchJobs}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onStatusChange={handleStatusChange}
-        onCreate={openCreateForm}
-        onView={handleView}
-      />
+      <div className={styles.viewTabs}>
+        <button
+          className={`${styles.viewTab} ${activeView === 'jobs' ? styles.active : ''}`}
+          onClick={() => setActiveView('jobs')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          Applications
+        </button>
+        <button
+          className={`${styles.viewTab} ${activeView === 'resume' ? styles.active : ''}`}
+          onClick={() => setActiveView('resume')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          Resume
+        </button>
+      </div>
+
+      {activeView === 'jobs' && (
+        <KanbanBoard
+          jobs={jobs}
+          isLoading={isLoading || authLoading}
+          error={error}
+          onRefresh={fetchJobs}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+          onCreate={openCreateForm}
+          onView={handleView}
+        />
+      )}
+
+      {activeView === 'resume' && (
+        <ResumeManager />
+      )}
 
       <Modal
         isOpen={isFormOpen}

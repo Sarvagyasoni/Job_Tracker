@@ -30,6 +30,7 @@ VITE_API_URL=http://localhost:8000
 ## Features
 
 - **Authentication**: Login, registration, JWT token management, protected routes
+- **Password Visibility Toggle**: Show/hide password on auth forms
 - **Dashboard**: Kanban board with 4 status columns (Applied, Interviewing, Offer, Rejected)
 - **Drag & Drop**: Move applications between status columns
 - **Job CRUD**: Create, view, edit, delete applications
@@ -38,10 +39,12 @@ VITE_API_URL=http://localhost:8000
 - **Dark Mode**: System preference detection, persisted toggle
 - **Accessibility**: Keyboard navigation, focus management, ARIA labels, skip links
 - **Toasts**: Success/error/info/warning notifications with auto-dismiss
+- **Frosted Glass UI**: Modern glassmorphism inputs with backdrop blur on auth pages
 
 ## Tech Stack
 
 - **React 19** + **TypeScript** + **Vite 8**
+- **Frosted Glass UI**: `backdrop-filter` for glassmorphism auth forms
 - **React Router 7** for routing
 - **Axios** for API communication
 - **@dnd-kit** for drag-and-drop

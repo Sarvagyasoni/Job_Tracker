@@ -15,15 +15,6 @@ git commit -m "Rollback to <commit-hash>"
 git checkout <commit-hash> -- src/path/to/file.tsx
 ```
 
-### Emergency: Disable Feature via Feature Flag
-If a new feature breaks production, toggle it off in `src/utils/featureFlags.ts`:
-```typescript
-export const featureFlags = {
-  jobSearch: false,  // Disable job search if API issues
-  dragDrop: false,   // Disable drag-drop if buggy
-};
-```
-
 ## Backend Rollback (Reference Only - Requires Approval)
 
 ### Database Migration Rollback

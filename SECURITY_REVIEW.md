@@ -61,6 +61,16 @@ The frontend codebase demonstrates good security practices overall. No critical 
 - Job Form: Company required, URL must start with http(s)://, date max today
 - Search: Required query, remote-only boolean
 - All forms disable submit while pending
+- **Password Toggle**: Show/hide password on auth forms with accessible button
+
+### ✅ 18. API Responses Not Unnecessarily Exposed in UI
+**Status**: PASS
+- Error responses normalized to user-friendly messages
+- Field errors mapped to form fields
+- Raw backend error details not displayed
+- Toast notifications use generic messages
+- **Improved 400 Handling**: First validation error used as primary message
+- **Improved 401 Handling**: Auth endpoints return backend message; protected routes auto-logout
 
 ### ✅ 9. Escape/Safely Render User-Generated Content
 **Status**: PASS

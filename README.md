@@ -53,14 +53,14 @@ job-tracker-frontend/
 ```
 
 ### Key Documentation
-All frontend documentation is in `job-tracker-frontend/`:
+All project documentation is in the root directory:
 
 | File | Purpose |
 |------|---------|
 | **HANDOVER.md** | Quick start, key commands, architecture summary, constraints |
 | **ARCHITECTURE.md** | System architecture, data flow, API layer, state management |
 | **FLOW.md** | User flows (auth, CRUD, drag-drop, search, errors) |
-| **DECISIONS.md** | 24 architecture decisions with rationale |
+| **DECISIONS.md** | 25 architecture decisions with rationale |
 | **CONSTRAINTS.md** | Backend/frontend boundaries, API contracts, error formats |
 | **TEST_CHECKLIST.md** | 250+ manual test cases (auth, CRUD, drag-drop, search, a11y) |
 | **ROLLBACK.md** | Rollback procedures for frontend/backend |

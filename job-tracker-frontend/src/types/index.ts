@@ -73,3 +73,29 @@ export interface RegisterData {
 export interface JobFilters {
   status?: JobStatus;
 }
+
+// ---------- Resume ----------
+export interface ResumeOut {
+  id: number;
+  original_filename: string;
+  uploaded_at: string;
+}
+
+export interface ATSScoreRequest {
+  job_description: string;
+}
+
+export interface ATSScoreResponse {
+  match_score: number;
+  matched_keywords: string[];
+  missing_keywords: string[];
+  summary: string;
+}
+
+export interface TailorBulletsRequest {
+  job_description: string;
+}
+
+export interface TailorBulletsResponse {
+  bullets: string[];
+}

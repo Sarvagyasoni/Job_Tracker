@@ -15,6 +15,8 @@
 - [ ] Password < 8 chars → shows "password must be at least 8 characters"
 - [ ] Empty fields → shows required field errors
 - [ ] Rate limit (6 rapid requests) → shows "Too many requests" message
+- [ ] **Password toggle shows/hides password**
+- [ ] **First validation error shown in toast on submit**
 
 ### Login
 - [ ] Valid credentials → success → token stored → redirect to dashboard
@@ -22,6 +24,8 @@
 - [ ] Non-existent email → shows "Incorrect email or password" (same message)
 - [ ] Empty fields → shows required field errors
 - [ ] Rate limit (6 rapid requests) → shows rate limit message
+- [ ] **Password toggle shows/hides password**
+- [ ] **Backend 401 message shown in toast (not redirect)**
 
 ### Session Persistence
 - [ ] Refresh page while logged in → stays logged in (token in localStorage)
@@ -46,6 +50,7 @@
 - [ ] Jobs grouped correctly by status
 - [ ] Loading state → shows skeleton cards with shimmer
 - [ ] Error state → shows retry button
+- [ ] **Auto-fetches jobs on dashboard mount (useEffect)**
 
 ### Create Job (POST /jobs)
 - [ ] Required only (company) → creates job with defaults
@@ -181,6 +186,17 @@
 - [ ] Preference persists on refresh
 - [ ] System preference detected on first visit
 - [ ] No flash of wrong theme on load
+
+### Auth Page UI (New)
+- [ ] **Frosted glass input wrapper with backdrop blur**
+- [ ] **Input focus state shows blue ring**
+- [ ] **Input error state shows red ring**
+- [ ] **Password toggle button works (show/hide)**
+- [ ] **Auth card is square (1:1) on mobile < 480px**
+- [ ] **Auth card is 4:3 on tablet 481-600px**
+- [ ] **Auth card is larger square on desktop > 600px**
+- [ ] **Card padding increases at each breakpoint**
+- [ ] **Max width 600px on desktop**
 
 ### Kanban Board
 - [ ] Horizontal scroll on desktop (> 1024px)
