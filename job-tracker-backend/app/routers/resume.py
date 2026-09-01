@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -10,12 +10,18 @@ from app.rate_limit import limiter
 from app.schemas import (
     ATSScoreRequest,
     ATSScoreResponse,
+    EnhanceResumeRequest,
     ResumeOut,
     TailorBulletsRequest,
     TailorBulletsResponse,
 )
-from app.services.llm_client import generate_tailored_bullets, score_resume_against_job
+from app.services.llm_client import (
+    generate_enhanced_resume_content,
+    generate_tailored_bullets,
+    score_resume_against_job,
+)
 from app.services.resume_parser import extract_resume_text
+from app.services.resume_pdf import render_resume_pdf
 
 router = APIRouter(prefix="/resume", tags=["resume"])
 
@@ -113,3 +119,26 @@ def tailor_bullets(
     resume = _get_own_resume_or_404(db, current_user)
     bullets = generate_tailored_bullets(resume.extracted_text, payload.job_description)
     return TailorBulletsResponse(bullets=bullets)
+
+
+@router.post("/enhance")
+@limiter.limit("10/minute")
+def enhance_resume(
+    request: Request,
+    payload: EnhanceResumeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generates an enhanced, reorganized version of the user's saved
+    resume tailored to the given job description, and returns it as a
+    downloadable PDF. Requires a resume to already be uploaded (404 if
+    not)."""
+    resume = _get_own_resume_or_404(db, current_user)
+    content = generate_enhanced_resume_content(resume.extracted_text, payload.job_description)
+    pdf_bytes = render_resume_pdf(content.sections)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="enhanced_resume.pdf"'},
+    )

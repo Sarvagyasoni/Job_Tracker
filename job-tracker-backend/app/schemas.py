@@ -182,3 +182,31 @@ class TailorBulletsRequest(BaseModel):
 
 class TailorBulletsResponse(BaseModel):
     bullets: list[str]
+
+
+# ---------- Enhanced resume (PDF generation) ----------
+
+class EnhanceResumeRequest(BaseModel):
+    job_description: str
+
+    @field_validator("job_description")
+    @classmethod
+    def job_description_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("job_description is required")
+        return v.strip()
+
+
+class ResumeSection(BaseModel):
+    """One section of the enhanced resume content Gemini generates - not a
+    public API response on its own; used internally to build the final PDF.
+    A section can have a prose paragraph (e.g. a Summary), a bulleted list
+    (e.g. Experience), or both."""
+
+    heading: str
+    paragraph: Optional[str] = None
+    bullet_points: list[str] = []
+
+
+class EnhancedResumeContent(BaseModel):
+    sections: list[ResumeSection]
