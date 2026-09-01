@@ -72,9 +72,15 @@ All routes below require `Authorization: Bearer <token>`.
   resume bullet points from your saved resume, tailored to highlight skills
   relevant to the job description, without inventing new experience. Requires
   a resume to already be uploaded (404 if not) — same as ATS scoring.
+- `POST /resume/enhance` — `{ "job_description" }` → reorganizes your saved
+  resume into sections (Summary, Skills, Experience, etc.) tailored to the
+  job description, and returns it as a downloadable PDF
+  (`Content-Type: application/pdf`). Grounded strictly in your original
+  resume's content — doesn't invent companies, titles, dates, or metrics.
+  Requires a resume to already be uploaded (404 if not).
 
-Both AI endpoints are rate-limited to 10 requests/minute per IP, and require
-`GEMINI_API_KEY` to be set (see below); return a clear 500 if it isn't.
+All three AI endpoints are rate-limited to 10 requests/minute per IP, and
+require `GEMINI_API_KEY` to be set (see below); return a clear 500 if it isn't.
 
 Errors: `401` for missing/invalid auth, `404` for a job that doesn't exist
 or belongs to another user, `400` for invalid input (missing `company`,
