@@ -211,3 +211,44 @@
 - Timeout/network → retry suggestion
 - Empty results → search refinement suggestion
 - No raw technical details exposed to users
+
+## 26. Sidebar as Primary Navigation
+**Decision**: The sidebar is the primary navigation for all protected sections (Dashboard, Applications, Suggestions, Resume). Each is a separate route navigated via React Router's `NavLink`.
+**Rationale**:
+- Eliminates duplicate navigation (previously Dashboard had embedded tabs for Applications/Suggestions/Resume)
+- Each section gets its own URL — bookmarkable, shareable, browser back/forward works
+- `NavLink`'s built-in `isActive` prop handles active state automatically
+- Matches user expectation of "each major section = its own page"
+- No state management needed for navigation — React Router handles it
+
+## 27. Logout via React Router (Not window.location)
+**Decision**: Use `useNavigate()` from React Router for logout navigation, not `window.location.href`.
+**Rationale**:
+- Preserves React Router state and history
+- Avoids full page reload (faster, smoother UX)
+- Consistent with the rest of the app's navigation
+- `window.location` is reserved for cases that truly require a full reload (e.g., after auth state corruption)
+
+## 28. Mobile Sidebar: Slide-Out with Overlay
+**Decision**: On screens < 1024px, the sidebar slides in from the left when the Header hamburger is clicked, with a semi-transparent overlay behind it.
+**Rationale**:
+- Standard mobile pattern users expect
+- Overlay click or close button dismisses the menu
+- Auto-closes on navigation (via `onNavigate` prop) so users don't have to manually close it
+- Auto-closes on resize back to desktop (handled in `Layout` useEffect)
+
+## 29. PDF Download via Blob + Object URL
+**Decision**: The "Enhance PDF" feature uses axios with `responseType: 'blob'`, creates an Object URL, and triggers a programmatic `<a download>` click to save the PDF.
+**Rationale**:
+- No new dependencies (no `file-saver` or similar) — uses the native browser download mechanism
+- Object URL is revoked immediately after click to avoid memory leaks
+- Consistent with how the browser handles native downloads (shows in the downloads bar, respects "ask where to save" settings)
+- Works in all modern browsers without pop-up blockers (programmatic clicks on same-origin elements are allowed)
+
+## 30. Blob Error Handling for Binary Endpoints
+**Decision**: For endpoints with `responseType: 'blob'`, error responses come back as JSON blobs (not parsed objects). The hook detects this by checking the blob's MIME type, and if it's JSON, parses it to extract the backend's `detail` message.
+**Rationale**:
+- axios's response interceptor normalizes errors assuming JSON, but with `responseType: 'blob'` the error body is left as a blob
+- Without this handling, users would see a generic "An unexpected error occurred" instead of the actionable backend message (e.g., "No resume on file. Upload one first.")
+- MIME-type detection is reliable because the backend sets `Content-Type` correctly for both success (application/pdf) and error (application/json) responses
+- Keeps the axios interceptor generic — no special-casing needed for blob endpoints at the interceptor level

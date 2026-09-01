@@ -20,7 +20,7 @@ const inspireImages = [
   '/assets/inspire/4ef4a451d365d70205460d6124c07784.jpg',
   '/assets/inspire/5b6ac339fe71079de1f5a0161507f61e.jpg',
   '/assets/inspire/6ad00ed67cb54a42622397f40f5b3c0a.jpg',
-  '/assets/inspire/7967f7702c1e43de4f5038c710b79cb.jpg',
+  '/assets/inspire/7967f47702c1e43de4f5038c710b79cb.jpg',
   '/assets/inspire/79ffae8cded520c77df207e4991ab7a2.jpg',
   '/assets/inspire/7cad1793c24b5a0e71ef3dfcb85609b3.jpg',
   '/assets/inspire/800090afe39b39363ea464b0ffc0b4c1.jpg',
@@ -51,6 +51,16 @@ export function Register() {
   // Pick random inspire image once per mount (stable across re-renders)
   const currentInspireIndex = useMemo(
     () => Math.floor(Math.random() * inspireImages.length),
+    []
+  );
+
+  const particles = useMemo(
+    () => Array.from({ length: 15 }, () => ({
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 40}s`,
+      duration: `${25 + Math.random() * 20}s`,
+    })),
     []
   );
 
@@ -94,7 +104,6 @@ export function Register() {
           loop
           muted
           playsInline
-          poster="/assets/background/d3eb7776aeb707542e0f3cf0d45aa198.jpg"
         >
           <source src="/assets/background/job_search_live_wallpaper.mp4" type="video/mp4" />
         </video>
@@ -104,13 +113,17 @@ export function Register() {
 
       {/* Floating particles */}
       <div className={styles.particles} aria-hidden="true">
-        {[...Array(15)].map((_, i) => (
-          <div key={i} className={styles.particle} style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 40}s`,
-            animationDuration: `${25 + Math.random() * 20}s`,
-          }} />
+        {particles.map((p, i) => (
+          <div
+            key={i}
+            className={styles.particle}
+            style={{
+              left: p.left,
+              top: p.top,
+              animationDelay: p.delay,
+              animationDuration: p.duration,
+            }}
+          />
         ))}
       </div>
 

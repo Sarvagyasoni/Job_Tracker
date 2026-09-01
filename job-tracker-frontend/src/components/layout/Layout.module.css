@@ -9,16 +9,52 @@
 .main {
   flex: 1;
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   padding: 2rem 1.5rem;
   position: relative;
   z-index: 10;
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
   .main {
-    padding: 3rem 2rem;
+    padding: 2.5rem 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .main {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    max-width: calc(100% - 260px);
+    padding: 2.5rem 3rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .main {
+    padding: 3rem 4rem;
+  }
+}
+
+/* ========================================
+   SIDEBAR OVERLAY (Mobile)
+   ======================================== */
+.sidebarOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+@media (max-width: 1023px) {
+  .sidebarOverlay {
+    display: block;
   }
 }
 
@@ -46,12 +82,10 @@
 .pageOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(15, 23, 42, 0.85) 0%,
-    rgba(30, 41, 59, 0.75) 50%,
-    rgba(15, 23, 42, 0.9) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(15, 23, 42, 0.85) 0%,
+      rgba(30, 41, 59, 0.75) 50%,
+      rgba(15, 23, 42, 0.9) 100%);
   z-index: 1;
 }
 
@@ -79,16 +113,24 @@
     transform: translateY(0) scale(0);
     opacity: 0;
   }
+
   10% {
     opacity: 0.4;
   }
+
   90% {
     opacity: 0.4;
   }
+
   100% {
     transform: translateY(-120vh) scale(1);
     opacity: 0;
   }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Ensure Header and Footer are above background */

@@ -244,6 +244,75 @@ Auto-dismiss after 5s with progress bar
 Manual dismiss via close button
 ```
 
+## 17. Resume Upload
+```
+User clicks "Resume" tab on Dashboard
+  ↓
+ResumeManager component renders
+  ↓
+User clicks "Upload Resume" → File picker (PDF/DOCX, 5MB max)
+  ↓
+Frontend validates file type, size
+  ↓
+POST /resume (multipart/form-data)
+  ↓
+Backend extracts text (magic-byte validation, pypdf/python-docx)
+  ↓
+Success: Toast "Resume uploaded" → Shows filename + upload date
+Error: Toast with user-friendly message (corrupted, wrong type, too large, no text)
+```
+
+## 18. ATS Score (AI)
+```
+User on Resume tab with resume uploaded
+  ↓
+Clicks "Get ATS Score"
+  ↓
+Enters job description → Clicks "Analyze"
+  ↓
+POST /resume/ats-score { job_description }
+  ↓
+Loading state
+  ↓
+Backend calls Gemini with structured output (ATSScoreResponse)
+  ↓
+Success: Shows match score (0-100), matched/missing keywords, summary
+Error: Toast with user-friendly message (missing API key, rate limit, timeout)
+```
+
+## 19. Tailor Bullets (AI) — CURRENTLY BROKEN
+```
+User on Resume tab with resume uploaded
+  ↓
+Clicks "Tailor Bullets"
+  ↓
+Enters job description → Clicks "Generate"
+  ↓
+POST /resume/tailor-bullets { job_description }
+  ↓
+Backend calls Gemini with response_schema=list[str] (BUG: bare type)
+  ↓
+Returns 502: "AI provider returned an unreadable response"
+  ↓
+Frontend shows error toast
+```
+**Note**: This feature is broken due to backend bug. See `BACKEND_ISSUES_REPORT.md` Item 1.
+
+## 20. Suggested Jobs (AI-Powered Search)
+```
+User clicks "Suggestion" tab on Dashboard
+  ↓
+GET /jobs/suggested?page=1
+  ↓
+Backend: Reads user's resume → Gemini generates search query → JSearch API
+  ↓
+Results render as JobSearchResultCard cards (same as Job Search)
+  ↓
+User can "Track Job" to save to applications
+Error: If no resume → 404 "Upload a resume first"
+Error: If missing GEMINI_API_KEY or JSEARCH_API_KEY → 500 with hint
+```
+
 ## Error Handling Flow
 ```
 Any API call fails

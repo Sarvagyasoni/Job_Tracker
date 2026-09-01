@@ -2,7 +2,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types';
 
 export const axiosInstance = axios.create({
-  baseURL: '',
+  baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 15000,
 });
 

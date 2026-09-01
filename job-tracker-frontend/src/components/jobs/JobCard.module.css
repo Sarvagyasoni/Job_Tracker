@@ -1,23 +1,41 @@
 .card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 1rem;
+  padding: 1.125rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   position: relative;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 .card:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  z-index: 10;
 }
 
 .card.dragging {
   opacity: 0.5;
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-primary);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  border-color: rgba(37, 99, 235, 0.5);
+  transform: scale(1.02);
 }
 
 .dragHandle {
@@ -27,22 +45,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.875rem;
+  height: 1.875rem;
   color: var(--color-text-muted);
   cursor: grab;
-  border-radius: var(--radius-sm);
-  transition: color 0.15s ease, background-color 0.15s ease;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
   z-index: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
 }
 
 .dragHandle:hover {
   color: var(--color-text);
-  background-color: var(--color-hover);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border-color: rgba(148, 163, 184, 0.2);
+  transform: scale(1.1);
 }
 
 .dragHandle:active {
   cursor: grabbing;
+  transform: scale(0.95);
 }
 
 .card.dragging .dragHandle {
@@ -58,70 +83,109 @@
   padding-left: 2rem;
 }
 
+.companyInfo {
+  flex: 1;
+  min-width: 0;
+}
+
 .company {
   margin: 0 0 0.25rem;
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: var(--color-text);
+  line-height: 1.3;
 }
 
 .role {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--color-text-muted);
-}
-
-.statusWrapper {
-  flex-shrink: 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .statusBadge {
   display: inline-flex;
   align-items: center;
+  gap: 0.375rem;
   padding: 0.25rem 0.625rem;
   font-size: 0.75rem;
   font-weight: 600;
   font-family: inherit;
-  color: var(--color-text);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
   border-radius: 9999px;
-  text-transform: capitalize;
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.statusIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statusText {
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .status-applied {
-  border-color: var(--color-status-applied);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
   color: var(--color-status-applied);
 }
 
 .status-interviewing {
-  border-color: var(--color-status-interviewing);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
   color: var(--color-status-interviewing);
 }
 
 .status-offer {
-  border-color: var(--color-status-offer);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
   color: var(--color-status-offer);
 }
 
 .status-rejected {
-  border-color: var(--color-status-rejected);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
   color: var(--color-status-rejected);
 }
 
 .details {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+  gap: 0.625rem;
+  margin-bottom: 0.625rem;
 }
 
 .detail {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-text-muted);
+  padding: 0.25rem 0.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 0.5rem;
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.detail:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-color: rgba(148, 163, 184, 0.2);
 }
 
 .detail a {
@@ -139,12 +203,18 @@
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem;
-  background-color: var(--color-background);
-  border-radius: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.015) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 0.75rem;
+  margin-bottom: 0.625rem;
+  font-size: 0.8125rem;
   color: var(--color-text);
   line-height: 1.5;
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 }
 
 .notes svg {
@@ -161,7 +231,7 @@
 
 .actions {
   display: flex;
-  gap: 0.5rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-border);
+  gap: 0.375rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
 }

@@ -91,3 +91,16 @@ The frontend expects the FastAPI backend running at `VITE_API_URL` (default `htt
 ## Backend
 
 See `job-tracker-backend/README.md` for API documentation, database setup, and deployment instructions.
+
+## Development with Docker
+
+```bash
+# Start all services (creates both job_tracker and job_tracker_test databases)
+docker-compose up -d
+
+# Backend: http://localhost:8000
+# Frontend: http://localhost:5173
+# API Docs: http://localhost:8000/docs
+```
+
+The test database (`job_tracker_test`) is automatically created via `init-db.sh` on first container startup. To reset: `docker-compose down -v && docker-compose up -d`.

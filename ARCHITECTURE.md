@@ -40,17 +40,50 @@
 ### Structure
 ```
 src/
-├── api/              # Axios instance + typed endpoints (auth, jobs, resume)
-├── auth/             # AuthContext, useAuth, token decode (client-side only)
-├── components/
-│   ├── common/       # Button, Input, Select, Modal, Toast, ProtectedRoute, PublicRoute
-│   ├── layout/       # Header, Footer, Layout, ScrollToTop (video background + particles)
-│   └── jobs/         # JobCard, JobForm, JobList, KanbanBoard, JobSearch, ResumeManager
-├── hooks/            # useJobs, useJobSearch, useResume, useForm, useToast
-├── pages/            # Login, Register, Dashboard (Kanban + Resume), JobsList (table)
-├── types/            # TypeScript interfaces mirroring backend Pydantic schemas
-├── App.tsx           # Router, providers, route guards
-└── main.tsx          # Entry point
+├── api/                          # HTTP LAYER
+│   ├── axiosInstance.ts          # Axios config + interceptors (auth, errors)
+│   └── endpoints.ts              # Typed API functions (authApi, jobsApi, resumeApi)
+├── auth/                         # AUTH STATE
+│   ├── AuthContext.tsx           # React Context provider
+│   ├── AuthContextType.ts        # TypeScript interface
+│   ├── useAuth.ts                # Hook to consume context
+│   └── useAuth.test.tsx          # Tests
+├── components/                   # UI COMPONENTS (feature-organized)
+│   ├── common/                   # Reusable primitives
+│   │   ├── Button.tsx
+│   │   ├── Input.tsx
+│   │   ├── Select.tsx
+│   │   ├── Modal.tsx             # Portal-rendered, focus-trapped
+│   │   ├── Toast.tsx             # Custom toast system (no library)
+│   │   ├── ProtectedRoute.tsx    # Auth guard
+│   │   └── PublicRoute.tsx       # Guest-only guard
+│   ├── layout/                   # Page chrome
+│   │   ├── Layout.tsx            # Wrapper with Header/Footer
+│   │   ├── Header.tsx            # Nav, user menu, theme toggle
+│   │   └── ScrollToTop.tsx       # Scroll restoration on route change
+│   └── jobs/                     # Job-specific components
+│       ├── KanbanBoard.tsx       # DnD context provider
+│       ├── KanbanColumn.tsx      # Single column + cards
+│       ├── JobCard.tsx           # Draggable card
+│       ├── JobForm.tsx           # Create/edit modal
+│       ├── JobSearch.tsx         # External search modal
+│       └── ResumeManager.tsx     # Upload + AI features
+├── hooks/                        # STATE LOGIC (custom hooks = "containers")
+│   ├── useJobs.ts                # Jobs CRUD + optimistic updates
+│   ├── useJobSearch.ts           # External search + pagination
+│   ├── useResume.ts              # Resume + AI features
+│   ├── useForm.ts                # Shared form logic
+│   └── useToast.ts               # Toast actions
+├── pages/                        # ROUTE-LEVEL COMPONENTS
+│   ├── Login.tsx
+│   ├── Register.tsx
+│   ├── Dashboard.tsx             # Kanban + Resume tabs
+│   └── JobsList.tsx              # Alternative table view
+├── types/                        # TYPESCRIPT INTERFACES
+│   └── index.ts                  # Mirrors your Pydantic schemas exactly
+├── App.tsx                       # Router + providers + guards
+├── main.tsx                      # Entry point (React 18 createRoot)
+└── index.css                     # Design tokens (CSS variables) + globals
 ```
 
 ### Key Patterns
@@ -189,3 +222,4 @@ resumes
 | 10 | Frontend `VITE_API_URL` defined but unused | `.env.example`, `axiosInstance.ts:5` | Low |
 | 11 | `alembic.ini` has placeholder `sqlalchemy.url` | `alembic.ini:63` | Low |
 | 12 | No production Dockerfile for frontend | — | Low |
+| 13 | Tailor Bullets broken: `response_schema=list[str]` (bare type) | `llm_client.py:154` | **High** |

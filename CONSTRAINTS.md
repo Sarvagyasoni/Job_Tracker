@@ -26,6 +26,12 @@
 | PUT /jobs/:id | All fields optional, partial updates allowed |
 | DELETE /jobs/:id | Returns 204, no body |
 | GET /jobs/search | Requires backend API key, not saved automatically |
+| POST /resume | multipart/form-data, PDF/DOCX, 5MB max, magic-byte validated |
+| GET /resume | Requires auth, returns 404 if no resume |
+| DELETE /resume | Requires auth, returns 404 if no resume |
+| POST /resume/ats-score | Requires resume + GEMINI_API_KEY, rate limited 10/min |
+| POST /resume/tailor-bullets | Requires resume + GEMINI_API_KEY, rate limited 10/min (currently broken) |
+| GET /jobs/suggested | Requires resume + GEMINI_API_KEY + JSEARCH_API_KEY, rate limited 10/min |
 
 ## Data Constraints
 - **JobStatus enum**: `applied`, `interviewing`, `offer`, `rejected` (exact strings)

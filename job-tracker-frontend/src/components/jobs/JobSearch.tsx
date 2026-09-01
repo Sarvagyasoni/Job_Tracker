@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Button, Input, Select } from '../common';
 import { JobSearchResultCard } from './JobSearchResultCard';
 import { useJobSearch } from '../../hooks/useJobs';
@@ -11,16 +11,15 @@ interface JobSearchProps {
 }
 
 export function JobSearch({ onTrackJob, onClose }: JobSearchProps) {
-  const { results, isLoading, error, query, search, loadMore, clearResults, clearError } = useJobSearch();
+  const { results, isLoading, error, query, search, loadMore, clearResults } = useJobSearch();
   const [searchQuery, setSearchQuery] = useState('');
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleSearch = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
-    
+
     setIsSearching(true);
     clearResults();
     await search(searchQuery, 1, remoteOnly);
@@ -37,15 +36,9 @@ export function JobSearch({ onTrackJob, onClose }: JobSearchProps) {
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSearch(e as unknown as React.FormEvent);
+      handleSearch();
     }
   }, [handleSearch]);
-
-  useEffect(() => {
-    if (error) {
-      clearError();
-    }
-  }, [error, clearError]);
 
   return (
     <div className={styles.container}>

@@ -22,11 +22,13 @@ export interface ToastContextType {
   dismiss: (id: string) => void;
 }
 
+let nextToastId = 0;
+
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = (toast: Omit<Toast, 'id'>) => {
-    const id = Math.random().toString(36).substring(2, 9);
+    const id = `toast-${++nextToastId}`;
     const newToast = { ...toast, id };
     setToasts((prev) => [...prev, newToast]);
     return id;

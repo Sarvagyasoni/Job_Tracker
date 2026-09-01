@@ -12,6 +12,7 @@ import type {
   ResumeOut,
   ATSScoreResponse,
   TailorBulletsResponse,
+  SuggestedJobsResponse,
 } from '../types';
 
 export const authApi = {
@@ -49,6 +50,11 @@ export const jobsApi = {
     });
     return axiosInstance.get<JobSearchResponse>(`/jobs/search?${params}`);
   },
+
+  suggested: (page = 1) => {
+    const params = new URLSearchParams({ page: page.toString() });
+    return axiosInstance.get<SuggestedJobsResponse>(`/jobs/suggested?${params}`);
+  },
 };
 
 export const resumeApi = {
@@ -72,5 +78,16 @@ export const resumeApi = {
   tailorBullets: (jobDescription: string) =>
     axiosInstance.post<TailorBulletsResponse>('/resume/tailor-bullets', {
       job_description: jobDescription,
+    }),
+
+  enhance: (jobDescription: string) =>
+    axiosInstance.post('/resume/enhance', { job_description: jobDescription }, {
+      responseType: 'blob',
+      // Bumped from the global 15s default - this endpoint runs a full
+      // Gemini generation (EnhancedResumeContent schema, 8192 max tokens) plus
+      // a reportlab PDF render, which routinely takes 20-30s. The global
+      // 15s default would otherwise kill the connection before the backend
+      // has a chance to respond. See BACKEND_ISSUES_REPORT.md Item 1.
+      timeout: 60000,
     }),
 };

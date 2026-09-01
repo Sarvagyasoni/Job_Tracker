@@ -3,7 +3,7 @@ export type JobStatus = 'applied' | 'interviewing' | 'offer' | 'rejected';
 export interface User {
   id: number;
   email: string;
-  created_at: string;
+  created_at: string | null;
 }
 
 export interface Token {
@@ -54,6 +54,12 @@ export interface JobSearchResponse {
   results: JobSearchResult[];
 }
 
+export interface SuggestedJobsResponse {
+  generated_query: string;
+  page: number;
+  results: JobSearchResult[];
+}
+
 export interface ApiError {
   message: string;
   fieldErrors?: Record<string, string>;
@@ -98,4 +104,8 @@ export interface TailorBulletsRequest {
 
 export interface TailorBulletsResponse {
   bullets: string[];
+}
+
+export interface EnhanceResumeRequest {
+  job_description: string;
 }

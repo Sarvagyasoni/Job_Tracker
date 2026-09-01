@@ -1,10 +1,44 @@
+import { useMemo, useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
+import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { ScrollToTop } from './ScrollToTop';
 import styles from './Layout.module.css';
 
+interface Particle {
+  left: string;
+  top: string;
+  delay: string;
+  duration: string;
+}
+
+const PARTICLE_COUNT = 15;
+
+function generateParticles(): Particle[] {
+  return Array.from({ length: PARTICLE_COUNT }, () => ({
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 40}s`,
+    duration: `${25 + Math.random() * 20}s`,
+  }));
+}
+
 export function Layout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const particles = useMemo(generateParticles, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className={styles.layout}>
       {/* Live wallpaper background video */}
@@ -15,7 +49,6 @@ export function Layout() {
           loop
           muted
           playsInline
-          poster="/assets/background/d3eb7776aeb707542e0f3cf0d45aa198.jpg"
         >
           <source src="/assets/background/job_search_live_wallpaper.mp4" type="video/mp4" />
         </video>
@@ -24,17 +57,31 @@ export function Layout() {
 
       {/* Floating particles */}
       <div className={styles.particles} aria-hidden="true">
-        {[...Array(15)].map((_, i) => (
-          <div key={i} className={styles.particle} style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 40}s`,
-            animationDuration: `${25 + Math.random() * 20}s`,
-          }} />
+        {particles.map((p, i) => (
+          <div
+            key={i}
+            className={styles.particle}
+            style={{
+              left: p.left,
+              top: p.top,
+              animationDelay: p.delay,
+              animationDuration: p.duration,
+            }}
+          />
         ))}
       </div>
 
-      <Header />
+      <Sidebar isOpen={isSidebarOpen} onNavigate={() => setIsSidebarOpen(false)} />
+      
+      {isSidebarOpen && (
+        <div
+          className={styles.sidebarOverlay}
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <Header onMenuClick={() => setIsSidebarOpen(true)} />
       <main id="main-content" className={styles.main} role="main">
         <Outlet />
       </main>

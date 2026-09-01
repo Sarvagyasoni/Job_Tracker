@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode, useCallback } from 'react';
-import type { User } from '../types';
+import type { ApiError, User } from '../types';
 import { authApi } from '../api';
 import { AuthContext } from './AuthContextType';
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser({
         id: parseInt(decoded.sub, 10),
         email: storedEmail || '',
-        created_at: new Date().toISOString(),
+        created_at: null,
       });
     }
     setIsLoading(false);
@@ -65,12 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           id: parseInt(decoded.sub, 10),
           email,
-          created_at: new Date().toISOString(),
+          created_at: null,
         });
       }
       return { success: true };
     } catch (error: unknown) {
-      const apiError = error as { message?: string; fieldErrors?: Record<string, string> };
+      const apiError = error as ApiError;
       return { success: false, error: apiError.message || 'Login failed' };
     }
   };
@@ -83,10 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('user_email', email);
       setToken(access_token);
-      setUser(response.data);
+      setUser({ ...response.data, email });
       return { success: true };
     } catch (error: unknown) {
-      const apiError = error as { message?: string; fieldErrors?: Record<string, string> };
+      const apiError = error as ApiError;
       return { success: false, error: apiError.message || 'Registration failed' };
     }
   };

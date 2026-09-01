@@ -8,15 +8,15 @@ export function Footer() {
           &copy; {new Date().getFullYear()} Job Application Tracker. Built with React + TypeScript.
         </p>
         <div className={styles.links}>
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer" className={styles.link}>
+          <button type="button" className={styles.link} disabled>
             GitHub
-          </a>
-          <a href="#privacy" className={styles.link}>
+          </button>
+          <button type="button" className={styles.link} disabled>
             Privacy
-          </a>
-          <a href="#terms" className={styles.link}>
+          </button>
+          <button type="button" className={styles.link} disabled>
             Terms
-          </a>
+          </button>
         </div>
       </div>
     </footer>

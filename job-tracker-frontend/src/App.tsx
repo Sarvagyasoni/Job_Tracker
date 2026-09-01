@@ -4,7 +4,7 @@ import { ToastProvider } from './components/common';
 import { Layout } from './components/layout';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PublicRoute } from './components/common/PublicRoute';
-import { Login, Register, Dashboard, JobsList } from './pages';
+import { Login, Register, Dashboard, Applications, Suggestions, Resume, NotFound } from './pages';
 
 function AppRoutes() {
   return (
@@ -14,11 +14,13 @@ function AppRoutes() {
 
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/jobs" element={<JobsList />} />
+        <Route path="/applications" element={<Applications />} />
+        <Route path="/suggestions" element={<Suggestions />} />
+        <Route path="/resume" element={<Resume />} />
         <Route index element={<Navigate to="/dashboard" replace />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

@@ -10,15 +10,36 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { KanbanColumn } from './KanbanColumn';
+import { JOB_STATUS_LABELS } from './jobStatus';
 import type { Job, JobStatus } from '../../types';
 import styles from './KanbanBoard.module.css';
 
 const STATUS_ORDER: JobStatus[] = ['applied', 'interviewing', 'offer', 'rejected'];
-const STATUS_LABELS: Record<JobStatus, string> = {
-  applied: 'Applied',
-  interviewing: 'Interviewing',
-  offer: 'Offer',
-  rejected: 'Rejected',
+
+const STATUS_ICONS: Record<JobStatus, React.ReactNode> = {
+  applied: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  interviewing: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+  offer: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  rejected: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
 };
 
 interface KanbanBoardProps {
@@ -65,7 +86,8 @@ export function KanbanBoard({
     );
     return STATUS_ORDER.map((status) => ({
       status,
-      label: STATUS_LABELS[status],
+      label: JOB_STATUS_LABELS[status],
+      icon: STATUS_ICONS[status],
       jobs: grouped[status] || [],
     }));
   }, [jobs]);
@@ -155,12 +177,13 @@ export function KanbanBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className={styles.board} role="list" aria-label="Job applications by status">
-          {columns.map(({ status, label, jobs: columnJobs }) => (
+        <div className={styles.columnsWrapper} role="list" aria-label="Job applications by status">
+          {columns.map(({ status, label, icon, jobs: columnJobs }) => (
             <KanbanColumn
               key={status}
               status={status}
               label={label}
+              icon={icon}
               jobs={columnJobs}
               activeJobId={activeJobId}
               onEdit={onEdit}

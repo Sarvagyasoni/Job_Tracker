@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { jobsApi } from '../api';
-import type { Job, JobCreate, JobUpdate, JobFilters, JobSearchResult, ApiError } from '../types';
+import type { Job, JobCreate, JobUpdate, JobFilters, JobSearchResult, ApiError, SuggestedJobsResponse } from '../types';
 
 export function useJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -116,5 +116,51 @@ export function useJobSearch() {
     loadMore,
     clearError: () => setError(null),
     clearResults: () => setResults([]),
+  };
+}
+
+export function useSuggestedJobs() {
+  const [response, setResponse] = useState<SuggestedJobsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const fetchSuggested = useCallback(async (pageNum = 1) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await jobsApi.suggested(pageNum);
+      if (pageNum === 1) {
+        setResponse(res.data);
+      } else {
+        setResponse((prev: SuggestedJobsResponse | null) =>
+          prev ? { ...prev, results: [...prev.results, ...res.data.results], page: pageNum } : res.data
+        );
+      }
+      setPage(pageNum);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError.message || 'Failed to load suggested jobs');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const loadMore = useCallback(() => {
+    if (!isLoading && response) {
+      fetchSuggested(page + 1);
+    }
+  }, [isLoading, response, page, fetchSuggested]);
+
+  return {
+    results: response?.results ?? [],
+    generatedQuery: response?.generated_query ?? '',
+    isLoading,
+    error,
+    page,
+    fetchSuggested,
+    loadMore,
+    clearError: () => setError(null),
+    clearResults: () => setResponse(null),
   };
 }

@@ -1,6 +1,25 @@
 import { useState, useCallback } from 'react';
+import axios from 'axios';
 import { resumeApi } from '../api';
 import type { ResumeOut, ApiError } from '../types';
+
+async function extractErrorFromBlob(err: unknown): Promise<string | null> {
+  // The enhance endpoint uses responseType: 'blob', so error responses come
+  // back as JSON blobs rather than parsed objects. Reach into the raw axios
+  // error to parse the blob and surface the backend's detail message.
+  if (!axios.isAxiosError(err)) return null;
+  const responseData = err.response?.data;
+  if (responseData instanceof Blob) {
+    const text = await responseData.text();
+    try {
+      const parsed = JSON.parse(text) as { detail?: string };
+      return parsed.detail || null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 export function useResume() {
   const [resume, setResume] = useState<ResumeOut | null>(null);
@@ -86,6 +105,45 @@ export function useResume() {
     }
   }, []);
 
+  const enhanceResume = useCallback(async (jobDescription: string) => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      const response = await resumeApi.enhance(jobDescription);
+      const blob = response.data as Blob;
+
+      // Some non-2xx responses may still be delivered as a JSON blob before
+      // axios raises (e.g. if a proxy returns 200 with an error body). Guard
+      // against that by checking the MIME type and surfacing the detail.
+      if (blob.type === 'application/json' || blob.type === 'text/json') {
+        const text = await blob.text();
+        const parsed = JSON.parse(text) as { detail?: string };
+        const message = parsed.detail || 'Failed to generate enhanced resume.';
+        setError(message);
+        return { success: false, error: message };
+      }
+
+      // Success: trigger a browser download of the PDF.
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'enhanced_resume.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      return { success: true };
+    } catch (err) {
+      const detail = await extractErrorFromBlob(err);
+      const apiError = err as ApiError;
+      const message = detail || apiError.message || 'Failed to generate enhanced resume.';
+      setError(message);
+      return { success: false, error: message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     resume,
     isLoading,
@@ -95,6 +153,7 @@ export function useResume() {
     deleteResume,
     getATSScore,
     tailorBullets,
+    enhanceResume,
     clearError: () => setError(null),
   };
 }

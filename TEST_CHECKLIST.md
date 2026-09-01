@@ -258,6 +258,40 @@
 - [ ] Copy-to-clipboard only for user-provided URLs
 - [ ] File upload not implemented (N/A)
 
+## Resume & AI Features Tests
+
+### Resume Upload
+- [ ] Upload valid PDF → success → shows filename + date
+- [ ] Upload valid DOCX → success → shows filename + date
+- [ ] Upload file > 5MB → error "Resume file is too large"
+- [ ] Upload corrupted PDF → error "Could not read this file"
+- [ ] Upload image renamed as .pdf → error "doesn't look like a real PDF"
+- [ ] Upload empty file → error "Uploaded file is empty"
+- [ ] Upload .txt file → error "Resume must be a PDF or DOCX"
+- [ ] Re-upload replaces existing → shows new filename
+
+### Resume Management
+- [ ] GET /resume without upload → 404 "No resume on file"
+- [ ] DELETE /resume → removes resume → 404 on subsequent GET
+
+### ATS Score (POST /resume/ats-score)
+- [ ] With resume + valid JD → returns match_score, matched/missing keywords, summary
+- [ ] Without resume → 404 "No resume on file"
+- [ ] Empty JD → validation error
+- [ ] Missing GEMINI_API_KEY → 500 with hint
+
+### Tailor Bullets (POST /resume/tailor-bullets) — CURRENTLY BROKEN
+- [ ] With resume + valid JD → **BUG: returns 502 "unreadable response"**
+- [ ] Without resume → 404 "No resume on file"
+- [ ] Empty JD → validation error
+- [ ] Missing GEMINI_API_KEY → 500 with hint
+
+### Suggested Jobs (GET /jobs/suggested)
+- [ ] With resume → returns AI-generated query + job results
+- [ ] Without resume → 404 "Upload a resume first"
+- [ ] Missing API keys → 500 with hint
+- [ ] Load More pagination works
+
 ## Edge Cases
 - [ ] Very long company name → wraps gracefully
 - [ ] Very long notes → scrollable in modal

@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useResume } from '../../hooks';
-import { Button, useToast } from '../../components/common';
-import type { ATSScoreResponse } from '../../types';
-import styles from './ResumeManager.module.css';
+import { useResume } from '../hooks';
+import { Button, useToast } from '../components/common';
+import type { ATSScoreResponse, ApiError } from '../types';
+import styles from './JobsList.module.css';
 
-export function ResumeManager() {
-  const { resume, fetchResume, uploadResume, deleteResume, getATSScore, tailorBullets } = useResume();
+export function Resume() {
+  const { resume, fetchResume, uploadResume, deleteResume, getATSScore, tailorBullets, enhanceResume } = useResume();
   const { toast } = useToast();
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -18,12 +18,18 @@ export function ResumeManager() {
   const [tailorJobDescription, setTailorJobDescription] = useState('');
   const [isTailoring, setIsTailoring] = useState(false);
   const [tailoringStage, setTailoringStage] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'upload' | 'ats' | 'tailor'>('upload');
+  const [enhanceJobDescription, setEnhanceJobDescription] = useState('');
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [enhancingStage, setEnhancingStage] = useState<string>('');
+  const [lastEnhancedAt, setLastEnhancedAt] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState<'upload' | 'ats' | 'tailor' | 'enhance'>('upload');
   const uploadFileInputRef = useRef<HTMLInputElement>(null);
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
 
   const jdCharCount = tailorJobDescription.length;
   const canTailor = tailorJobDescription.trim().length > 0;
+  const enhanceJdCharCount = enhanceJobDescription.length;
+  const canEnhance = enhanceJobDescription.trim().length > 0;
 
   useEffect(() => {
     fetchResume();
@@ -44,7 +50,6 @@ export function ResumeManager() {
       setSelectedFile(file);
       setIsUploadOpen(true);
     }
-    // Clear the input so same file can be selected again
     e.target.value = '';
   }, [toast]);
 
@@ -61,7 +66,7 @@ export function ResumeManager() {
         toast({ type: 'error', title: 'Upload failed', message: result.error });
       }
     } catch (err) {
-      const error = err as { message?: string };
+      const error = err as ApiError;
       toast({ type: 'error', title: 'Upload failed', message: error.message });
     } finally {
       setIsUploading(false);
@@ -74,7 +79,7 @@ export function ResumeManager() {
       await deleteResume();
       toast({ type: 'success', title: 'Resume deleted' });
     } catch (err) {
-      const error = err as { message?: string };
+      const error = err as ApiError;
       toast({ type: 'error', title: 'Delete failed', message: error.message });
     }
   }, [resume, deleteResume, toast]);
@@ -94,7 +99,7 @@ export function ResumeManager() {
         toast({ type: 'error', title: 'Scoring failed', message: result.error });
       }
     } catch (err) {
-      const error = err as { message?: string };
+      const error = err as ApiError;
       toast({ type: 'error', title: 'Scoring failed', message: error.message });
     } finally {
       setIsScoring(false);
@@ -120,12 +125,38 @@ export function ResumeManager() {
       }
     } catch (err) {
       setTailoringStage('');
-      const error = err as { message?: string };
+      const error = err as ApiError;
       toast({ type: 'error', title: 'Tailoring failed', message: error.message });
     } finally {
       setIsTailoring(false);
     }
   }, [tailorJobDescription, tailorBullets, toast]);
+
+  const handleEnhanceResume = useCallback(async () => {
+    if (!enhanceJobDescription.trim()) {
+      toast({ type: 'error', title: 'Missing job description', message: 'Please paste a job description to tailor toward.' });
+      return;
+    }
+    setIsEnhancing(true);
+    setEnhancingStage('Reorganizing your resume...');
+    try {
+      const result = await enhanceResume(enhanceJobDescription);
+      if (result.success) {
+        setLastEnhancedAt(new Date());
+        setEnhancingStage('');
+        toast({ type: 'success', title: 'Enhanced resume downloaded', message: 'Your tailored PDF has been saved to your downloads.' });
+      } else {
+        setEnhancingStage('');
+        toast({ type: 'error', title: 'Enhancement failed', message: result.error });
+      }
+    } catch (err) {
+      setEnhancingStage('');
+      const error = err as ApiError;
+      toast({ type: 'error', title: 'Enhancement failed', message: error.message });
+    } finally {
+      setIsEnhancing(false);
+    }
+  }, [enhanceJobDescription, enhanceResume, toast]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -142,6 +173,13 @@ export function ResumeManager() {
 
   return (
     <div className={styles.container}>
+      <header className={styles.header}>
+        <div>
+          <h1>Resume</h1>
+          <p>Upload your resume for ATS scoring and tailored bullet points</p>
+        </div>
+      </header>
+
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${activeTab === 'upload' ? styles.active : ''}`} onClick={() => setActiveTab('upload')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -164,6 +202,15 @@ export function ResumeManager() {
             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
           </svg>
           Tailor Bullets
+        </button>
+        <button className={`${styles.tab} ${activeTab === 'enhance' ? styles.active : ''}`} onClick={() => setActiveTab('enhance')}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="9" y1="15" x2="15" y2="15" />
+            <line x1="12" y1="12" x2="12" y2="18" />
+          </svg>
+          Enhance PDF
         </button>
       </div>
 
@@ -356,6 +403,103 @@ export function ResumeManager() {
                       </Button>
                     </li>
                   </ol>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'enhance' && (
+        <div className={styles.tabContent}>
+          {!resume ? (
+            <div className={styles.emptyState}>
+              <p>Upload a resume first to generate an enhanced PDF.</p>
+            </div>
+          ) : (
+            <>
+              <div className={styles.enhanceIntro}>
+                <div className={styles.enhanceIntroIcon} aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={styles.enhanceIntroTitle}>Generate a tailored PDF resume</h3>
+                  <p className={styles.enhanceIntroText}>
+                    We'll reorganize your resume ({resume.original_filename}) into clean sections
+                    (Summary, Skills, Experience, Education) and emphasize what's most relevant to
+                    the job you paste below. The result is a downloadable, print-ready PDF.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <label htmlFor="enhance-job-desc">Target Job Description</label>
+                  <span className={styles.charCount}>{enhanceJdCharCount} chars</span>
+                </div>
+                <p className={styles.hint}>
+                  The more complete the job description, the better the tailoring.
+                </p>
+                <textarea
+                  id="enhance-job-desc"
+                  value={enhanceJobDescription}
+                  onChange={e => setEnhanceJobDescription(e.target.value)}
+                  placeholder="Paste the full job description here..."
+                  rows={10}
+                  className={styles.textarea}
+                />
+              </div>
+
+              <Button
+                className={styles.generateButton}
+                variant="primary"
+                size="lg"
+                onClick={handleEnhanceResume}
+                isLoading={isEnhancing}
+                disabled={!canEnhance || isEnhancing}
+              >
+                {isEnhancing ? (
+                  <>
+                    <span className={styles.spinner} aria-hidden="true" />
+                    {enhancingStage || 'Generating PDF...'}
+                  </>
+                ) : (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Generate Enhanced PDF
+                  </>
+                )}
+              </Button>
+
+              {lastEnhancedAt && !isEnhancing && (
+                <div className={styles.enhanceSuccess} role="status">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <div>
+                    <strong>Last generated:</strong>{' '}
+                    {lastEnhancedAt.toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                    <p className={styles.enhanceSuccessHint}>
+                      Check your browser's downloads folder for <code>enhanced_resume.pdf</code>.
+                      You can re-generate anytime with a different job description.
+                    </p>
+                  </div>
                 </div>
               )}
             </>

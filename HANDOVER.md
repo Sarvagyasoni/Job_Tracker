@@ -21,14 +21,29 @@ npm run dev
 ## Architecture Summary
 - **API Layer** (`src/api/`): Axios instance with interceptors, typed endpoints
 - **Auth** (`src/auth/`): Context + hooks for JWT token management
-- **Pages** (`src/pages/`): Route-level components (Login, Register, Dashboard)
+- **Pages** (`src/pages/`): Route-level components (Login, Register, Dashboard, Applications, Suggestions, Resume)
 - **Components** (`src/components/`): Reusable UI components
   - `common/`: Button, Input, Select, Textarea, Card, Modal, Toast, ProtectedRoute, PublicRoute
-  - `jobs/`: JobCard, JobForm, JobList, KanbanBoard, KanbanColumn, JobSearch, JobSearchResultCard
-  - `layout/`: Header, Footer, Layout, ScrollToTop
-- **Hooks** (`src/hooks/`): Custom React hooks (useAuth, useJobs, useForm, useJobSearch)
+  - `jobs/`: JobCard, JobForm, JobList, KanbanBoard, KanbanColumn, JobSearch, JobSearchResultCard, SuggestedJobs, ResumeManager
+  - `layout/`: Header, Sidebar, Footer, Layout, ScrollToTop
+- **Hooks** (`src/hooks/`): Custom React hooks (useAuth, useJobs, useForm, useJobSearch, useResume)
 - **Types** (`src/types/`): TypeScript interfaces matching backend schemas
 - **Styles** (`src/index.css`): CSS variables for theming (dark/light mode)
+
+## Navigation Structure
+The sidebar is the **primary navigation** for all protected routes:
+
+| Sidebar Item | Route | Component |
+|--------------|-------|-----------|
+| Dashboard | `/dashboard` | `Dashboard` - Stats cards, recent applications |
+| Applications | `/applications` | `Applications` - Kanban board for job tracking |
+| Suggestions | `/suggestions` | `Suggestions` - AI-powered job recommendations |
+| Resume | `/resume` | `Resume` - Resume upload, ATS scoring, bullet tailoring |
+
+- **Routing**: React Router v6 (`react-router-dom`)
+- **Active state**: `NavLink` automatically highlights the current route
+- **Mobile**: Sidebar collapses into a slide-out menu (toggled via Header hamburger)
+- **Logout**: Uses React Router `navigate('/login')` (not `window.location`)
 
 ## Backend Contract (Source of Truth)
 - **Base URL**: `http://localhost:8000` (configurable via `VITE_API_URL`)
@@ -75,6 +90,38 @@ VITE_API_URL=http://localhost:8000
 - **Loading Skeletons**: Shimmer cards during search
 - **Error Handling**: API timeout, rate limit, missing config, empty results, network errors
 - **Accessible**: Keyboard navigation, focus states, ARIA labels, live regions
+
+## Phase 4 Features Implemented (Resume & AI)
+- **Resume Upload**: PDF/DOCX upload (5MB max) with magic-byte validation via POST /resume
+- **Resume Management**: View filename/upload date, delete resume
+- **ATS Score**: Compare resume vs job description via POST /resume/ats-score (Gemini)
+- **Tailor Bullets**: Generate 5-8 tailored resume bullets via POST /resume/tailor-bullets (Gemini)
+- **Enhance PDF**: Generate a reorganized, job-tailored resume as a downloadable PDF via POST /resume/enhance (Gemini + reportlab)
+- **Resume Tabs**: Resume page has "Resume", "ATS Score", "Tailor Bullets", "Enhance PDF" tabs
+- **Rate Limited**: AI endpoints limited to 10 req/min
+
+## Phase 5: Navigation Reorganization (2026-09-01)
+- **Sidebar = Primary Navigation**: Dashboard, Applications, Suggestions, Resume are now sibling routes navigated via the sidebar
+- **Removed Duplicate Tabs**: The old "Applications | Suggestions | Resume" tab group inside the Dashboard has been removed
+- **Dashboard is Dashboard-Only**: The Dashboard now contains only summary content (stats cards, recent applications) — no embedded sub-pages
+- **React Router Integration**: Sidebar uses `NavLink` for active state tracking; logout uses `useNavigate()` (not `window.location`)
+- **Mobile**: Sidebar collapses into a slide-out menu with close button; overlay click dismisses
+- **Dead Code Cleanup**: Removed unused `JobsList.tsx` and its CSS module (replaced by the proper `Applications` page)
+
+## Phase 6: Enhanced PDF Resume (2026-09-01)
+- **New Tab on Resume Page**: "Enhance PDF" tab alongside the existing Upload/ATS/Tailor tabs
+- **AI-Powered Reorganization**: Sends the user's resume + a target job description to `POST /resume/enhance`, which uses Gemini to reorganize the resume into clean sections (Summary, Skills, Experience, Education) tailored to the job
+- **PDF Download**: Response is a binary PDF (rendered server-side via reportlab) that the frontend auto-downloads as `enhanced_resume.pdf`
+- **Blob Error Handling**: Since the endpoint returns a blob, error responses come back as JSON blobs — the hook detects this by MIME type and surfaces the backend's `detail` message
+- **Success State**: Shows a confirmation card with the timestamp of the last successful generation and a hint to check the browser's downloads folder
+- **Rate Limited**: 10 req/min (same as other AI endpoints)
+- **Requires**: A resume must already be uploaded (backend returns 404 otherwise)
+
+### Known Issue: Tailor Bullets Currently Broken
+- **Bug**: `generate_tailored_bullets()` in `llm_client.py:154` uses `response_schema=list[str]` (bare Python type)
+- **Result**: Returns "AI provider returned an unreadable response"
+- **Fix**: Requires backend change - create Pydantic wrapper model like `_SearchQuery`
+- **Status**: Documented in `BACKEND_ISSUES_REPORT.md` Item 1
 
 ## Security Review Summary (2026-08-16)
 Full review in `SECURITY_REVIEW.md`

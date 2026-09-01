@@ -2,6 +2,9 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './Modal.module.css';
 
+let openModalCount = 0;
+const previousOverflow: string[] = [];
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,16 +30,22 @@ export function Modal({
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
-      document.body.style.overflow = 'hidden';
-      modalRef.current?.focus();
-    } else {
-      document.body.style.overflow = '';
-      previousActiveElement.current?.focus();
-    }
+    if (!isOpen) return;
+
+    previousOverflow.push(document.body.style.overflow);
+    document.body.style.overflow = 'hidden';
+    openModalCount += 1;
+
+    previousActiveElement.current = document.activeElement as HTMLElement;
+    modalRef.current?.focus();
+
     return () => {
-      document.body.style.overflow = '';
+      openModalCount = Math.max(0, openModalCount - 1);
+      const prev = previousOverflow.pop();
+      if (openModalCount === 0) {
+        document.body.style.overflow = prev ?? '';
+      }
+      previousActiveElement.current?.focus();
     };
   }, [isOpen]);
 
