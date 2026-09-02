@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 
-from app.models import JobStatus
+from app.models import EmploymentType, ExperienceLevel, JobStatus, RemotePreference
 
 
 # ---------- Auth ----------
@@ -145,6 +145,55 @@ class ResumeOut(BaseModel):
     # not the full text echoed back.
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------- Profile (self-reported job preferences) ----------
+
+class ProfileUpdate(BaseModel):
+    """All fields optional so PUT /profile can act as an upsert - create a
+    profile from scratch or update just a subset of fields on an existing
+    one, matching the JobUpdate pattern used for jobs."""
+
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    current_location: Optional[str] = None
+
+    desired_role: Optional[str] = None
+    skills: Optional[list[str]] = None
+    experience_level: Optional[ExperienceLevel] = None
+    preferred_locations: Optional[list[str]] = None
+    remote_preference: Optional[RemotePreference] = None
+    employment_type: Optional[EmploymentType] = None
+
+    @field_validator("full_name", "desired_role", "phone", "current_location")
+    @classmethod
+    def not_blank_if_provided(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("field cannot be blank")
+        return v.strip() if v is not None else v
+
+    @field_validator("skills", "preferred_locations")
+    @classmethod
+    def strip_and_drop_blanks(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is None:
+            return v
+        return [item.strip() for item in v if item and item.strip()]
+
+
+class ProfileOut(BaseModel):
+    id: int
+    user_id: int
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    current_location: Optional[str] = None
+    desired_role: Optional[str] = None
+    skills: list[str] = []
+    experience_level: Optional[ExperienceLevel] = None
+    preferred_locations: list[str] = []
+    remote_preference: Optional[RemotePreference] = None
+    employment_type: Optional[EmploymentType] = None
+    created_at: datetime
+    updated_at: datetime
 
 
 # ---------- ATS compatibility scoring ----------

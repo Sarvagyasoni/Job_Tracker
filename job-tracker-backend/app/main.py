@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.database import settings
 from app.rate_limit import limiter
-from app.routers import auth, jobs, resume
+from app.routers import auth, jobs, profile, resume
 
 app = FastAPI(title="Job Application Tracker API")
 
@@ -30,6 +30,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(jobs.router)
 app.include_router(resume.router)
+app.include_router(profile.router)
 
 
 @app.exception_handler(RequestValidationError)
