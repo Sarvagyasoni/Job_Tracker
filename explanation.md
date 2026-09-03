@@ -42,13 +42,14 @@
 app/
 ├── main.py           # FastAPI app, CORS, rate limiter, router registration, validation handler
 ├── database.py       # Pydantic Settings (.env), SQLAlchemy engine/session, Base
-├── models.py         # SQLAlchemy ORM: User, Job, Resume
-├── schemas.py        # Pydantic request/response models
+├── models.py         # SQLAlchemy ORM: User (with profile fields), Job, Resume
+├── schemas.py        # Pydantic request/response models (incl. UserProfile)
 ├── auth.py           # bcrypt hashing, JWT create/verify, get_current_user dependency
 ├── rate_limit.py     # Shared slowapi Limiter (IP-based)
 ├── routers/
 │   ├── auth.py       # POST /register, POST /login (5/min)
-│   ├── jobs.py       # CRUD + GET /search (JSearch)
+│   ├── jobs.py       # CRUD + GET /search (JSearch) + GET /suggested
+│   ├── profile.py    # GET/PUT /users/me/profile (upsert)
 │   └── resume.py     # Upload/GET/DELETE, POST /ats-score, POST /tailor-bullets (10/min)
 └── services/
     ├── job_search.py      # JSearch client (httpx async)
@@ -82,6 +83,9 @@ tests/
 ```sql
 users
   id (PK), email (unique), hashed_password, created_at
+  + Profile columns: first_name, last_name, preferred_roles, preferred_locations,
+    work_mode, employment_type, experience_level, years_of_experience, skills,
+    minimum_salary_amount, minimum_salary_currency, profile_updated_at
 
 jobs
   id (PK), user_id (FK→users, cascade), company, role, status (ENUM), date_applied, link, notes, created_at, updated_at
@@ -104,6 +108,9 @@ resumes
 | `/jobs/{id}` | PUT | Bearer | Update job (partial, for drag-drop) |
 | `/jobs/{id}` | DELETE | Bearer | Delete job |
 | `/jobs/search` | GET | Bearer | External job search via JSearch |
+| `/jobs/suggested` | GET | Bearer | AI-powered suggestions (preferences or resume-based) |
+| `/users/me/profile` | GET | Bearer | Fetch user profile (404 if none) |
+| `/users/me/profile` | PUT | Bearer | Create/update profile (upsert) |
 | `/resume` | POST | Bearer | Upload resume (PDF/DOCX, 5MB max) |
 | `/resume` | GET | Bearer | Get resume metadata |
 | `/resume` | DELETE | Bearer | Delete resume |
@@ -123,10 +130,13 @@ src/
 ├── auth/             # AuthContext, useAuth, token decode (client-side only)
 ├── components/
 │   ├── common/       # Button, Input, Select, Modal, Toast, ProtectedRoute, PublicRoute
-│   ├── layout/       # Header, Footer, Layout, ScrollToTop (video background + particles)
-│   └── jobs/         # JobCard, JobForm, JobList, KanbanBoard, JobSearch, ResumeManager
+│   ├── layout/       # Header, Footer, Layout, Sidebar, ScrollToTop
+│   └── jobs/         # JobCard, JobForm, KanbanBoard, JobSearch, SuggestedJobs
+├── config/           # Feature flags (FEATURES.profile)
+├── features/
+│   └── profile/      # Profile feature (types, API, hook, components, pages)
 ├── hooks/            # useJobs, useJobSearch, useResume, useForm, useToast
-├── pages/            # Login, Register, Dashboard, JobsList
+├── pages/            # Login, Register, Dashboard, Applications, Suggestions, Resume
 ├── types/            # TypeScript interfaces mirroring backend Pydantic schemas
 ├── test/             # Vitest setup + utilities
 ├── App.tsx           # Router, providers, route guards
@@ -178,10 +188,13 @@ App loads
   ↓
 Check localStorage for token
   ↓
-If token exists: call GET /jobs to validate
+If token exists: set user in context from decoded JWT
   ↓
-  Success → Set user in context → Show dashboard
-  Failure (401) → Clear token → Redirect to /login
+ProfileGate checks GET /users/me/profile
+  ↓
+  Profile complete → Show protected layout (Dashboard, etc.)
+  Profile incomplete/404 → Redirect to /onboarding
+  401 → Clear token → Redirect to /login
 ```
 
 ### 5.4 Token Handling
@@ -358,6 +371,9 @@ jobsApi.create(data)       → POST /jobs
 jobsApi.update(id, data)   → PUT /jobs/:id
 jobsApi.delete(id)         → DELETE /jobs/:id
 jobsApi.search(query, page, remoteOnly) → GET /jobs/search
+jobsApi.suggested(page, usePreferences) → GET /jobs/suggested
+profileApi.get()           → GET /users/me/profile
+profileApi.update(data)    → PUT /users/me/profile
 resumeApi.upload(file)     → POST /resume
 resumeApi.get()            → GET /resume
 resumeApi.delete()         → DELETE /resume
@@ -447,7 +463,8 @@ resumeApi.tailorBullets(jd)→ POST /resume/tailor-bullets
 | Domain | Module | Public Interface | Dependencies |
 |--------|--------|------------------|--------------|
 | Auth | `app/auth.py` | `hash_password`, `create_access_token`, `get_current_user` | DB, Settings |
-| Jobs | `app/routers/jobs.py` + `app/services/job_search.py` | CRUD + search | DB, JSearch |
+| Jobs | `app/routers/jobs.py` + `app/services/job_search.py` | CRUD + search + suggested | DB, JSearch, Gemini |
+| Profile | `app/routers/profile.py` | GET/PUT `/users/me/profile` | DB |
 | Resume | `app/routers/resume.py` + `app/services/resume_parser.py` + `app/services/llm_client.py` | Upload, AI features | DB, Files, Gemini |
 
 ### 11.3 Cross-Cutting Concerns

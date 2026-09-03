@@ -19,6 +19,9 @@ The frontend is a **React 19 + TypeScript + Vite** single-page application built
 - **Dashboard** (`/dashboard`): Kanban board with drag-and-drop status changes (Applied → Interviewing → Offer → Rejected)
 - **Applications List** (`/jobs`): Filterable, paginated list view with inline editing
 - **Job Search** (`/dashboard` → "Discover Jobs"): External job board search via JSearch API, with one-click "Track Job" to save listings
+- **Suggestions**: AI-powered job recommendations (resume-based or preference-based)
+- **Resume & AI**: Upload resume, ATS scoring, bullet tailoring, enhanced PDF generation
+- **Profile & Preferences** (`/profile`): User profile with onboarding gate, editable job preferences
 - **Live Wallpaper**: Full-screen video background across all protected routes
 - **Dark/Light Mode**: System-aware with manual toggle, persisted in localStorage
 - **Accessibility**: Keyboard navigation, ARIA labels, skip links, focus management
@@ -38,11 +41,14 @@ job-tracker-frontend/
 │   ├── api/              # Axios instance + typed API endpoints
 │   ├── auth/             # AuthContext + useAuth hook (JWT management)
 │   ├── components/
-│   │   ├── common/       # Button, Input, Modal, Toast, ProtectedRoute
-│   │   ├── jobs/         # JobCard, JobForm, JobList, KanbanBoard, JobSearch
-│   │   └── layout/       # Header, Footer, Layout, ScrollToTop
-│   ├── hooks/            # useJobs, useJobSearch, useForm
-│   ├── pages/            # Login, Register, Dashboard, JobsList
+│   │   ├── common/       # Button, Input, Modal, Toast, ProtectedRoute, PublicRoute
+│   │   ├── jobs/         # JobCard, JobForm, KanbanBoard, JobSearch, SuggestedJobs
+│   │   └── layout/       # Header, Footer, Layout, Sidebar, ScrollToTop
+│   ├── config/           # Feature flags (FEATURES.profile)
+│   ├── features/
+│   │   └── profile/      # Profile feature (types, API, hook, components, pages)
+│   ├── hooks/            # useJobs, useJobSearch, useResume, useForm
+│   ├── pages/            # Login, Register, Dashboard, Applications, Suggestions, Resume
 │   ├── types/            # TypeScript interfaces (mirrors backend schemas)
 │   └── index.css         # Design system + print styles
 ├── public/assets/
@@ -60,7 +66,7 @@ All project documentation is in the root directory:
 | **HANDOVER.md** | Quick start, key commands, architecture summary, constraints |
 | **ARCHITECTURE.md** | System architecture, data flow, API layer, state management |
 | **FLOW.md** | User flows (auth, CRUD, drag-drop, search, errors) |
-| **DECISIONS.md** | 25 architecture decisions with rationale |
+| **DECISIONS.md** | 34 architecture decisions with rationale |
 | **CONSTRAINTS.md** | Backend/frontend boundaries, API contracts, error formats |
 | **TEST_CHECKLIST.md** | 250+ manual test cases (auth, CRUD, drag-drop, search, a11y) |
 | **ROLLBACK.md** | Rollback procedures for frontend/backend |
@@ -84,7 +90,7 @@ VITE_API_URL=http://localhost:8000
 The frontend expects the FastAPI backend running at `VITE_API_URL` (default `http://localhost:8000`). All API calls are proxied via Vite in dev, and the frontend expects:
 - JWT Bearer tokens (60-min expiry)
 - CORS configured for `http://localhost:5173`
-- Endpoints: `/auth/register`, `/auth/login`, `/jobs`, `/jobs/search`
+- Endpoints: `/auth/register`, `/auth/login`, `/jobs`, `/jobs/search`, `/users/me/profile`, `/jobs/suggested`
 
 ---
 

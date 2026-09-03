@@ -31,13 +31,17 @@
 | DELETE /resume | Requires auth, returns 404 if no resume |
 | POST /resume/ats-score | Requires resume + GEMINI_API_KEY, rate limited 10/min |
 | POST /resume/tailor-bullets | Requires resume + GEMINI_API_KEY, rate limited 10/min (currently broken) |
-| GET /jobs/suggested | Requires resume + GEMINI_API_KEY + JSEARCH_API_KEY, rate limited 10/min |
+| GET /jobs/suggested | Requires resume + GEMINI_API_KEY + JSEARCH_API_KEY, rate limited 10/min. Optional `use_preferences` param |
+| GET /users/me/profile | Requires auth. Returns 404 if no profile exists |
+| PUT /users/me/profile | Requires auth. Upsert (create or update). Partial updates allowed |
 
 ## Data Constraints
 - **JobStatus enum**: `applied`, `interviewing`, `offer`, `rejected` (exact strings)
 - **Date format**: ISO 8601 (`YYYY-MM-DD`) for `date_applied`
 - **Link validation**: Must start with `http://` or `https://`
 - **Company**: Non-empty string, trimmed
+- **Profile required fields**: `first_name` (1-100 chars), `last_name` (1-100 chars), `preferred_roles` (min 1, max 10, 25 chars/item), `preferred_locations` (min 1, max 10, 25 chars/item)
+- **Profile optional fields**: `work_mode`, `employment_type`, `experience_level`, `years_of_experience`, `skills` (max 30, 50 chars), `minimum_salary` (amount + currency)
 
 ## Error Response Format (Backend)
 ```json

@@ -5,41 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Job, JobStatus, Resume, RemotePreference, User, UserProfile
+from app.models import Job, JobStatus, User
 from app.rate_limit import limiter
-from app.routers.profile import _split as _split_profile_list
+from app.routers.resume import _get_own_resume_or_404
 from app.schemas import JobCreate, JobOut, JobSearchResponse, JobUpdate, SuggestedJobsResponse
 from app.services.job_search import search_jobs
 from app.services.llm_client import generate_job_search_query
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-
-
-def _build_profile_context(profile: UserProfile) -> str:
-    """Renders a UserProfile as a short plain-text blob for the LLM prompt
-    in generate_job_search_query - not a public API response shape."""
-    lines = []
-    if profile.desired_role:
-        lines.append(f"Desired role: {profile.desired_role}")
-    skills = _split_profile_list(profile.skills)
-    if skills:
-        lines.append(f"Skills: {', '.join(skills)}")
-    if profile.experience_level:
-        lines.append(f"Experience level: {profile.experience_level.value}")
-    locations = _split_profile_list(profile.preferred_locations)
-    if locations:
-        lines.append(f"Preferred location(s): {', '.join(locations)}")
-    elif profile.current_location:
-        # Fall back to current_location only if no explicit job-search
-        # location preference was given - preferred_locations always wins
-        # when both are present, since it's an intentional job-search
-        # signal rather than just "where the candidate happens to live".
-        lines.append(f"Current location (no explicit preference given): {profile.current_location}")
-    if profile.remote_preference:
-        lines.append(f"Remote preference: {profile.remote_preference.value}")
-    if profile.employment_type:
-        lines.append(f"Employment type: {profile.employment_type.value}")
-    return "\n".join(lines)
 
 
 def _get_owned_job_or_404(job_id: int, db: Session, current_user: User) -> Job:
@@ -90,35 +63,73 @@ async def search_jobs_endpoint(
 async def suggested_jobs_endpoint(
     request: Request,
     page: int = Query(default=1, ge=1),
+    use_preferences: bool = Query(
+        default=True,
+        description=(
+            "When true (default) and the user has a complete profile, "
+            "search using preferred_roles x preferred_locations. "
+            "When false, fall back to resume-based query generation."
+        ),
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Reads the user's saved resume and/or profile (self-reported job
-    preferences), has Gemini generate a search query combining them - the
-    resume signals what the candidate can do, the profile signals what
-    they're looking for - then runs that query against the same live job
-    board /jobs/search uses. Requires at least a resume or a profile to
-    already be on file (404 if neither exists). A profile with a "remote"
-    preference also restricts the search to remote-only listings."""
-    resume = db.query(Resume).filter(Resume.user_id == current_user.id).first()
-    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    """Suggest jobs to the user.
 
-    if resume is None and profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=(
-                "No resume or profile on file. Upload a resume via POST "
-                "/resume, or set your job preferences via PUT /profile."
-            ),
+    Two modes (selected by use_preferences):
+    - use_preferences=true (default): builds a cartesian product of
+      preferred_roles x preferred_locations, runs each via /jobs/search,
+      deduplicates results by job link.
+    - use_preferences=false: reads the user's saved resume, has Gemini
+      generate a single search query, runs that (legacy behaviour).
+
+    Requires either a complete profile or a saved resume - 404 if neither.
+    """
+    if use_preferences and _has_complete_profile(current_user):
+        roles = current_user.preferred_roles or []
+        locations = current_user.preferred_locations or []
+        remote_only = "remote" in (current_user.work_mode or [])
+
+        all_results = []
+        for role in roles:
+            for location in locations:
+                query = f"{role} in {location}"
+                batch = await search_jobs(
+                    query=query, page=page, remote_only=remote_only
+                )
+                all_results.extend(batch)
+
+        # Deduplicate by link (stable identifier from JSearch)
+        seen = set()
+        deduped = []
+        for r in all_results:
+            key = r.link or f"{r.company}|{r.role}"
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(r)
+
+        return SuggestedJobsResponse(
+            generated_query=f"{len(roles)} roles x {len(locations)} locations",
+            page=page,
+            results=deduped,
         )
 
-    resume_text = resume.extracted_text if resume else None
-    profile_context = _build_profile_context(profile) if profile else None
-
-    generated_query = generate_job_search_query(resume_text, profile_context=profile_context)
-    remote_only = bool(profile and profile.remote_preference == RemotePreference.remote)
-    results = await search_jobs(query=generated_query, page=page, remote_only=remote_only)
+    # Fallback: resume-based
+    resume = _get_own_resume_or_404(db, current_user)
+    generated_query = generate_job_search_query(resume.extracted_text)
+    results = await search_jobs(query=generated_query, page=page)
     return SuggestedJobsResponse(generated_query=generated_query, page=page, results=results)
+
+
+def _has_complete_profile(user: User) -> bool:
+    """True iff the user has filled in all four required profile fields."""
+    return bool(
+        (user.first_name or "").strip()
+        and (user.last_name or "").strip()
+        and len(user.preferred_roles or []) >= 1
+        and len(user.preferred_locations or []) >= 1
+    )
 
 
 @router.get("/{job_id}", response_model=JobOut)

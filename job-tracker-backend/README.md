@@ -17,13 +17,14 @@ dates, notes, etc.).
 ```
 app/
   main.py            FastAPI app, router wiring, error handling
-  models.py           SQLAlchemy models: User, Job, JobStatus enum
-  schemas.py          Pydantic request/response schemas
+  models.py           SQLAlchemy models: User (with profile fields), Job, Resume, JobStatus enum
+  schemas.py          Pydantic request/response schemas (incl. UserProfile, UserProfileUpdate)
   database.py          Engine/session setup, settings (.env)
   auth.py               Password hashing, JWT, get_current_user dependency
   routers/
     auth.py             /auth/register, /auth/login
-    jobs.py               /jobs CRUD endpoints
+    jobs.py               /jobs CRUD endpoints + /jobs/suggested
+    profile.py           /users/me/profile (GET/PUT)
 alembic/               Migration environment + versions/
 tests/                 pytest suite
 requirements.txt
@@ -52,11 +53,24 @@ All routes below require `Authorization: Bearer <token>`.
   automatically — pass a result's `company`/`role`/`link`/`notes` fields into
   `POST /jobs` to add it to your tracked list. Requires `JSEARCH_API_KEY` to be
   set (see below); returns a clear 500 error if it isn't configured.
-- `GET /jobs/suggested?page=1` — like `/jobs/search`, but you don't provide a
-  query yourself. Gemini reads your saved resume, generates a search query
-  representing your strongest role, then runs it against the same job board.
-  Requires both a saved resume (404 if none) and `GEMINI_API_KEY` (500 if
-  missing).
+- `GET /jobs/suggested?page=1&use_preferences=true` — like `/jobs/search`, but you
+  don't provide a query yourself. When `use_preferences=true` (default) and the
+  user has a complete profile, the backend runs a cartesian product of
+  `preferred_roles × preferred_locations` via JSearch, deduplicates by job link,
+  and returns combined results. When `use_preferences=false` or no profile exists,
+  falls back to resume-based query generation via Gemini. Requires either a
+  complete profile or a saved resume (404 if neither), plus `GEMINI_API_KEY`
+  and `JSEARCH_API_KEY`.
+
+**Profile**
+- `GET /users/me/profile` — returns the user's profile (first_name, last_name,
+  preferred_roles, preferred_locations, work_mode, employment_type,
+  experience_level, years_of_experience, skills, minimum_salary, is_complete).
+  Returns 404 if no profile has been created yet.
+- `PUT /users/me/profile` — creates or updates the user's profile (upsert).
+  Accepts partial updates. Required fields: first_name, last_name,
+  preferred_roles (min 1), preferred_locations (min 1). Returns the full
+  profile with server-computed `is_complete` flag.
 
 **Resume & AI features** (always scoped to the authenticated user)
 - `POST /resume` — upload a resume (PDF or DOCX, 5MB max) as `multipart/form-data`

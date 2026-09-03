@@ -252,3 +252,37 @@
 - Without this handling, users would see a generic "An unexpected error occurred" instead of the actionable backend message (e.g., "No resume on file. Upload one first.")
 - MIME-type detection is reliable because the backend sets `Content-Type` correctly for both success (application/pdf) and error (application/json) responses
 - Keeps the axios interceptor generic — no special-casing needed for blob endpoints at the interceptor level
+
+## 31. Feature-Flag + Isolated-Module Pattern for New Features
+**Decision**: All new features live in `src/features/{name}/` (own types, API, hook, components, README), gated by a single boolean in `src/config/features.ts`. Wire-up touches outside the feature directory are guarded by `isFeatureEnabled(name)`.
+**Rationale**:
+- A single boolean lets us kill a feature at runtime without code deletion (flip the flag, app behaves as if the feature never existed)
+- The feature directory contains every line of feature code, so removal is `rm -rf` + revert the 5-7 guarded wire-up lines
+- The README at `Job_Tracker/features/{name}/README.md` is the contract for both frontend and backend teams — backend reads it for the API spec, frontend reads it for the data model
+- Existing code (job search, resume, suggestions) does NOT need to be refactored into this pattern — works as-is, pattern is forward-looking
+- See `features/profile/README.md` for the canonical example
+
+## 32. Force Onboarding Until Profile Complete
+**Decision**: After register (and on login with no profile), the user is redirected to `/onboarding` and cannot access the rest of the app until their profile is complete (all four required fields filled).
+**Rationale**:
+- Personalized suggestions only work with a complete profile — letting users skip onboarding leads to a degraded Suggestions experience
+- A `<ProfileGate>` route guard wraps the protected layout, so the redirect is automatic and applies to every page
+- No infinite redirect: `/onboarding` is outside the gate, so completing the form navigates to `/dashboard` cleanly
+- Existing users without a profile are caught by the same gate on login
+- If the user closes the browser mid-onboarding, they pick up where they left off (their partial save is in the backend)
+
+## 33. Extend /jobs/suggested with use_preferences Flag (Not Replace)
+**Decision**: The `/jobs/suggested` endpoint accepts a new `use_preferences: bool = true` query param. When true AND profile is complete, the backend uses roles × locations cartesian product. When false OR no profile, it falls back to the existing resume-based query generation.
+**Rationale**:
+- No breaking change for existing users without a profile (resume-based path still works)
+- The two modes are complementary, not competing — power users can switch via the URL param
+- Backend deduplication (by job `link`) keeps the response size reasonable even with cartesian product (3 roles × 2 locations = 6 searches)
+- Frontend sends `use_preferences=true` by default; the only reason to send `false` is debugging or A/B testing
+- One endpoint, one cartesian loop, one dedup pass — simpler than maintaining a parallel `/suggested/preferences` endpoint
+
+## 34. Server-Computes is_complete (Not Client)
+**Decision**: The `is_complete` boolean on `UserProfile` is computed by the backend (`compute_is_complete()` in `app/schemas.py`) and returned on every read. The frontend uses it but never sets it.
+**Rationale**:
+- Single source of truth: if the rules for "complete" ever change (e.g. add a new required field), only the backend needs updating
+- The frontend's `isProfileComplete()` helper in `validation.ts` mirrors the same logic for UX purposes (showing the "set preferences" CTA), but the actual gate decision is always based on the server response
+- Avoids drift: client says "complete" but server says "incomplete" → gate still triggers onboarding (correct behavior)

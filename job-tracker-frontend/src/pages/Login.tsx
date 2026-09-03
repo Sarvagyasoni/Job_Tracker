@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Button, Input } from '../components/common';
+import { isFeatureEnabled } from '../config/features';
+import { profileApi } from '../features/profile/api';
+import { isProfileComplete } from '../features/profile/validation';
 import styles from './AuthPage.module.css';
 
 // Inspire images for card background - pick one randomly on each page load
@@ -71,7 +74,19 @@ export function Login() {
     try {
       const result = await login(email, password);
       if (result.success) {
-        navigate('/dashboard');
+        // If the profile feature is on, check whether this user needs to
+        // complete onboarding. Falls back to /dashboard if anything fails
+        // (e.g. transient network error) so users aren't stuck on login.
+        if (isFeatureEnabled('profile')) {
+          try {
+            const profile = await profileApi.get();
+            navigate(isProfileComplete(profile) ? '/dashboard' : '/onboarding');
+          } catch {
+            navigate('/dashboard');
+          }
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setError(result.error || 'Login failed');
       }

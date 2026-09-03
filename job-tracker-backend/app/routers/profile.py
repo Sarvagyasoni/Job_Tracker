@@ -1,96 +1,65 @@
+"""Routes for the user profile & job preferences feature.
+
+See features/profile/README.md for the full contract.
+
+Endpoints:
+- GET  /users/me/profile  -> 200 with UserProfile, or 404 if never created
+- PUT  /users/me/profile  -> 200 with updated UserProfile (upsert)
+"""
+
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import User, UserProfile
-from app.schemas import ProfileOut, ProfileUpdate
+from app.models import User
+from app.schemas import UserProfile, UserProfileUpdate, profile_to_response
 
-router = APIRouter(prefix="/profile", tags=["profile"])
-
-
-def _split(text: str | None) -> list[str]:
-    if not text:
-        return []
-    return [part.strip() for part in text.split(",") if part.strip()]
+router = APIRouter(prefix="/users/me", tags=["profile"])
 
 
-def _join(items: list[str] | None) -> str | None:
-    if not items:
-        return None
-    return ", ".join(items)
-
-
-def _to_out(profile: UserProfile) -> ProfileOut:
-    return ProfileOut(
-        id=profile.id,
-        user_id=profile.user_id,
-        full_name=profile.full_name,
-        phone=profile.phone,
-        current_location=profile.current_location,
-        desired_role=profile.desired_role,
-        skills=_split(profile.skills),
-        experience_level=profile.experience_level,
-        preferred_locations=_split(profile.preferred_locations),
-        remote_preference=profile.remote_preference,
-        employment_type=profile.employment_type,
-        created_at=profile.created_at,
-        updated_at=profile.updated_at,
-    )
-
-
-def _get_own_profile_or_404(db: Session, current_user: User) -> UserProfile:
-    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
-    if profile is None:
+@router.get("/profile", response_model=UserProfile)
+def get_my_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the current user's profile. 404 if it has never been created
+    (i.e. a brand-new user who hasn't completed onboarding yet)."""
+    if not current_user.profile_updated_at:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No profile on file. Set one first via PUT /profile.",
+            detail="No profile on file. Complete your profile via PUT /users/me/profile.",
         )
-    return profile
+    return profile_to_response(current_user)
 
 
-@router.get("", response_model=ProfileOut)
-def get_profile(
+@router.put("/profile", response_model=UserProfile)
+def upsert_my_profile(
+    payload: UserProfileUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    profile = _get_own_profile_or_404(db, current_user)
-    return _to_out(profile)
+    """Create or update the current user's profile. Partial update - any
+    field omitted from the request is left unchanged. Always returns 200
+    with the full updated profile."""
+    update_data = payload.model_dump(exclude_unset=True)
 
-
-@router.put("", response_model=ProfileOut)
-def upsert_profile(
-    profile_in: ProfileUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Creates the current user's profile if none exists yet, or updates
-    just the provided fields on the existing one (unset fields are left
-    untouched, mirroring PUT /jobs/{job_id})."""
-    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
-    update_data = profile_in.model_dump(exclude_unset=True)
-
-    if profile is None:
-        profile = UserProfile(user_id=current_user.id)
-        db.add(profile)
+    if "minimum_salary" in update_data:
+        ms = update_data.pop("minimum_salary")
+        if ms is None:
+            update_data["minimum_salary_amount"] = None
+            update_data["minimum_salary_currency"] = None
+        else:
+            update_data["minimum_salary_amount"] = ms["amount"]
+            update_data["minimum_salary_currency"] = ms["currency"]
 
     for field, value in update_data.items():
-        if field in ("skills", "preferred_locations"):
-            setattr(profile, field, _join(value))
-        else:
-            setattr(profile, field, value)
+        setattr(current_user, field, value)
 
+    current_user.profile_updated_at = datetime.utcnow()
     db.commit()
-    db.refresh(profile)
-    return _to_out(profile)
+    db.refresh(current_user)
 
-
-@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
-def delete_profile(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    profile = _get_own_profile_or_404(db, current_user)
-    db.delete(profile)
-    db.commit()
-    return None
+    return profile_to_response(current_user)

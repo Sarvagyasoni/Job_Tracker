@@ -51,8 +51,11 @@ export const jobsApi = {
     return axiosInstance.get<JobSearchResponse>(`/jobs/search?${params}`);
   },
 
-  suggested: (page = 1) => {
-    const params = new URLSearchParams({ page: page.toString() });
+  suggested: (page = 1, usePreferences = true) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      use_preferences: usePreferences.toString(),
+    });
     return axiosInstance.get<SuggestedJobsResponse>(`/jobs/suggested?${params}`);
   },
 };

@@ -35,6 +35,9 @@ VITE_API_URL=http://localhost:8000
 - **Drag & Drop**: Move applications between status columns
 - **Job CRUD**: Create, view, edit, delete applications
 - **Job Search**: Search external job boards, track discovered jobs
+- **Suggestions**: AI-powered job recommendations (resume-based or preference-based)
+- **Resume & AI**: Upload resume, ATS scoring, bullet tailoring, enhanced PDF generation
+- **Profile & Preferences**: Onboarding gate, editable profile with job preferences
 - **Responsive**: Desktop (horizontal kanban), tablet/mobile (vertical stack)
 - **Dark Mode**: System preference detection, persisted toggle
 - **Accessibility**: Keyboard navigation, focus management, ARIA labels, skip links
@@ -60,10 +63,13 @@ src/
 ├── auth/          # AuthContext + useAuth hook
 ├── components/
 │   ├── common/    # Button, Input, Select, Modal, Toast, etc.
-│   ├── jobs/      # JobCard, JobForm, KanbanBoard, JobSearch
-│   └── layout/    # Header, Footer, Layout
-├── hooks/         # useAuth, useJobs, useForm, useJobSearch
-├── pages/         # Login, Register, Dashboard
+│   ├── jobs/      # JobCard, JobForm, KanbanBoard, JobSearch, SuggestedJobs
+│   └── layout/    # Header, Footer, Layout, Sidebar
+├── config/        # Feature flags (FEATURES.profile)
+├── features/
+│   └── profile/   # Profile feature (types, API, hook, components, pages)
+├── hooks/         # useAuth, useJobs, useForm, useJobSearch, useResume
+├── pages/         # Login, Register, Dashboard, Applications, Suggestions, Resume
 ├── types/         # TypeScript interfaces (mirrors backend)
 └── index.css      # Design system + print styles
 ```
@@ -74,7 +80,7 @@ The frontend uses the existing FastAPI backend as the source of truth. See `job-
 
 - **Base URL**: `http://localhost:8000` (configurable via `VITE_API_URL`)
 - **Auth**: JWT Bearer tokens, 60 min expiry
-- **Endpoints**: `/auth/register`, `/auth/login`, `/jobs` (CRUD), `/jobs/search`
+- **Endpoints**: `/auth/register`, `/auth/login`, `/jobs` (CRUD), `/jobs/search`, `/users/me/profile`, `/jobs/suggested`
 
 ## Security Notes
 

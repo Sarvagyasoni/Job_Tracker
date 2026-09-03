@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.database import settings
 from app.rate_limit import limiter
-from app.routers import auth, jobs, profile, resume
+from app.routers import auth, jobs, resume, profile
 
 app = FastAPI(title="Job Application Tracker API")
 

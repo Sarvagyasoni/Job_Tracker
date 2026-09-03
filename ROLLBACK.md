@@ -59,6 +59,23 @@ If JWT secret compromised:
 2. `git revert <commit>` + deploy
 3. Or: hotfix if trivial
 
+### Scenario: Profile Feature Breaking Login
+**Symptom**: Login returns 500 for all users after deploying profile changes
+**Action**:
+1. Check if the profile migration was applied: `alembic current`
+2. If not applied: `alembic upgrade head`
+3. If migration is the issue: `alembic downgrade -1` to revert profile columns
+4. Restart backend
+
+### Scenario: Profile Feature Needs Full Removal
+**Action**:
+1. Set `FEATURES.profile = false` in `src/config/features.ts`
+2. If backend profile code needs removal:
+   - `rm job-tracker-backend/app/routers/profile.py`
+   - Revert `app/models.py`, `app/schemas.py`, `app/main.py`, `app/routers/jobs.py`
+   - `alembic downgrade -1` to drop profile columns
+3. Verify login works
+
 ### Scenario: CORS Error After Frontend Deploy
 **Symptom**: Browser console shows CORS errors
 **Action**:

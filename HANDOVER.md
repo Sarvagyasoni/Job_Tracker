@@ -39,6 +39,7 @@ The sidebar is the **primary navigation** for all protected routes:
 | Applications | `/applications` | `Applications` - Kanban board for job tracking |
 | Suggestions | `/suggestions` | `Suggestions` - AI-powered job recommendations |
 | Resume | `/resume` | `Resume` - Resume upload, ATS scoring, bullet tailoring |
+| Preferences | `/profile` | `ProfilePage` - Edit job preferences (guarded by `FEATURES.profile`) |
 
 - **Routing**: React Router v6 (`react-router-dom`)
 - **Active state**: `NavLink` automatically highlights the current route
@@ -116,6 +117,20 @@ VITE_API_URL=http://localhost:8000
 - **Success State**: Shows a confirmation card with the timestamp of the last successful generation and a hint to check the browser's downloads folder
 - **Rate Limited**: 10 req/min (same as other AI endpoints)
 - **Requires**: A resume must already be uploaded (backend returns 404 otherwise)
+
+## Phase 7: Profile & Job Preferences (2026-09-02)
+- **Full contract**: See `features/profile/README.md` (the single source of truth for this feature)
+- **Onboarding**: New users (and existing users without a profile) are forced to `/onboarding` before they can use the app. Two-step form: "About You" + "Job Preferences"
+- **Editable preferences**: Sidebar "Preferences" item links to `/profile` (wrapped in standard `Layout`) with the form pre-filled
+- **Required fields**: `first_name`, `last_name`, at least one `preferred_role`, at least one `preferred_location`
+- **Optional fields**: `work_mode`, `employment_type`, `experience_level`, `years_of_experience`, `skills` (chips), `minimum_salary` (amount + currency, behind a checkbox)
+- **Validation**: Client-side mirror of backend rules (25 char / 10 item limits, no duplicates, no empty required arrays)
+- **Personalized Suggestions**: `/jobs/suggested` extended with `use_preferences` flag — when true and profile is complete, backend runs cartesian product of roles × locations and dedupes by job link. Suggestions page shows the active roles/locations as a context bar with "Edit Preferences" link, and shows "Set Preferences" CTA when no profile exists
+- **Display**: Header and Sidebar show the user's first name when available, falling back to email
+- **Force gate**: A `<ProfileGate>` route guard wraps the protected layout. If the profile is incomplete, it redirects to `/onboarding` (with no infinite loop, since `/onboarding` is outside the gate)
+- **Feature flag**: `FEATURES.profile` in `src/config/features.ts` — flipping to `false` removes the entire feature (kills the onboarding gate, hides the Preferences nav item, falls back to resume-based suggestions)
+- **Isolation**: All new code under `src/features/profile/` (12 new files). Backend changes are one new file (`app/routers/profile.py`) + small surgical edits to `models.py`, `schemas.py`, `main.py`, `routers/jobs.py`, plus one new alembic migration
+- **Removal**: See Section 9 of `features/profile/README.md` for step-by-step removal instructions
 
 ### Known Issue: Tailor Bullets Currently Broken
 - **Bug**: `generate_tailored_bullets()` in `llm_client.py:154` uses `response_schema=list[str]` (bare Python type)

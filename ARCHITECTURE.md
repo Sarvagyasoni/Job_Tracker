@@ -91,6 +91,8 @@ src/
 - **Axios interceptors**: Attach Bearer token, normalize errors (400→fieldErrors, 401→logout redirect, 429/5xx→user messages)
 - **Custom hooks**: `useJobs`/`useResume` encapsulate server state + optimistic updates
 - **Routing**: `/login`, `/register` (public); `/dashboard` (Kanban + Resume tabs), `/jobs` (list) under `ProtectedRoute`
+- **Profile Gate**: `ProfileGate` wraps protected layout; forces `/onboarding` until profile complete
+- **Feature Flags**: `FEATURES.profile` in `src/config/features.ts` kills entire profile feature at runtime
 - **Styling**: CSS Modules + CSS variables, mobile-first, frosted-glass auth forms, video background on Layout
 
 ---
@@ -102,13 +104,14 @@ src/
 app/
 ├── main.py           # FastAPI app, CORS, rate limiter, router registration, validation handler
 ├── database.py       # Pydantic Settings (.env), SQLAlchemy engine/session, Base
-├── models.py         # SQLAlchemy ORM: User, Job, Resume
-├── schemas.py        # Pydantic request/response models
+├── models.py         # SQLAlchemy ORM: User, Job, Resume (User has profile fields)
+├── schemas.py        # Pydantic request/response models (incl. UserProfile, UserProfileUpdate)
 ├── auth.py           # bcrypt hashing, JWT create/verify, get_current_user dependency
 ├── rate_limit.py     # Shared slowapi Limiter (IP-based)
 ├── routers/
 │   ├── auth.py       # POST /register, POST /login (5/min)
-│   ├── jobs.py       # CRUD + GET /search (JSearch)
+│   ├── jobs.py       # CRUD + GET /search (JSearch) + GET /suggested (preferences or resume)
+│   ├── profile.py    # GET/PUT /users/me/profile (upsert)
 │   └── resume.py     # Upload/GET/DELETE, POST /ats-score, POST /tailor-bullets (10/min)
 └── services/
     ├── job_search.py      # JSearch client (httpx async)
@@ -122,6 +125,7 @@ app/
 - **Single resume per user**: `resumes.user_id` unique, upsert on upload, only `extracted_text` stored
 - **Structured LLM output**: Gemini `response_schema` enforces JSON matching Pydantic models
 - **Validation normalization**: 422 → 400 with field-level errors
+- **Profile on user table**: Profile fields stored directly on `users` (1:1, no join needed), nullable for backward compatibility
 
 ---
 
@@ -131,6 +135,9 @@ app/
 ```sql
 users
   id (PK), email (unique), hashed_password, created_at
+  + Profile columns: first_name, last_name, preferred_roles, preferred_locations,
+    work_mode, employment_type, experience_level, years_of_experience, skills,
+    minimum_salary_amount, minimum_salary_currency, profile_updated_at
 
 jobs
   id (PK), user_id (FK→users, cascade), company, role, status (ENUM), date_applied, link, notes, created_at, updated_at
@@ -145,6 +152,7 @@ resumes
 1. `43be7473c021` — users + jobs tables, ENUM `job_status`
 2. `fadee6b7c0ef` — index on `jobs.status`
 3. `484c0d7874e1` — resumes table
+4. `a1b2c3d4e5f6` — 12 profile columns on users table (nullable)
 
 ### Connection
 - `DATABASE_URL` from `.env` → SQLAlchemy engine with `pool_pre_ping=True`
@@ -164,6 +172,9 @@ resumes
 | `jobsApi.update` | `PUT /jobs/:id` | Bearer | Partial update (PATCH-like) |
 | `jobsApi.delete` | `DELETE /jobs/:id` | Bearer | |
 | `jobsApi.search` | `GET /jobs/search` | Bearer | Proxies JSearch, requires `JSEARCH_API_KEY` |
+| `jobsApi.suggested` | `GET /jobs/suggested` | Bearer | `use_preferences` param, requires resume or profile |
+| `profileApi.get` | `GET /users/me/profile` | Bearer | 404 if no profile |
+| `profileApi.update` | `PUT /users/me/profile` | Bearer | Upsert, partial updates |
 | `resumeApi.upload` | `POST /resume` | Bearer | multipart/form-data, 5MB limit |
 | `resumeApi.get` | `GET /resume` | Bearer | 404 if none |
 | `resumeApi.delete` | `DELETE /resume` | Bearer | |

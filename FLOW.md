@@ -25,7 +25,15 @@ Clicks "Login"
   ↓
 POST /auth/login
   ↓
-Success: 200 + Token → Store in localStorage → Redirect to /dashboard
+Success: 200 + Token → Store in localStorage
+  ↓
+If profile feature enabled:
+  GET /users/me/profile
+  ↓
+  Profile complete → Redirect to /dashboard
+  Profile incomplete/404 → Redirect to /onboarding
+If profile feature disabled:
+  Redirect to /dashboard
   ↓
 Error: 401 (bad credentials) / 422 (validation) / 429 (rate limit) → Show inline error
 ```
@@ -145,7 +153,73 @@ Render JobList with JobCards in responsive grid
 Same actions as Kanban: Create, View, Edit, Delete, Status change
 ```
 
-## 11. Logout
+## 11. Profile Onboarding
+```
+User (new or without profile) lands on /onboarding
+  ↓
+Two-step form: "About You" + "Job Preferences"
+  ↓
+Step 1: first_name, last_name (required)
+  ↓
+Step 2: preferred_roles, preferred_locations (required),
+        work_mode, employment_type, experience_level,
+        years_of_experience, skills, minimum_salary (optional)
+  ↓
+Clicks "Complete Setup"
+  ↓
+Client-side validation (25 char/10 item limits, no duplicates)
+  ↓
+PUT /users/me/profile
+  ↓
+Success: 200 + is_complete: true → Redirect to /dashboard
+  ↓
+Error: 400 (validation) → Field-level inline errors
+```
+
+## 12. Profile Edit (from Sidebar)
+```
+User clicks "Preferences" in sidebar
+  ↓
+Navigates to /profile
+  ↓
+GET /users/me/profile
+  ↓
+If 404 → Show empty form (first-time)
+If 200 → Pre-fill form with existing data
+  ↓
+User edits fields
+  ↓
+Clicks "Save Changes"
+  ↓
+PUT /users/me/profile
+  ↓
+Success: 200 → Toast "Preferences updated" → Stay on page
+  ↓
+Error: 400 (validation) → Field-level errors
+```
+
+## 13. Personalized Suggestions
+```
+User on /suggestions
+  ↓
+GET /jobs/suggested?page=1&use_preferences=true
+  ↓
+If profile complete:
+  Backend builds roles × locations cartesian product
+  Runs each combination via JSearch
+  Deduplicates by job link
+  ↓
+If no profile or use_preferences=false:
+  Falls back to resume-based query generation
+  ↓
+Results render as JobSearchResultCard cards
+  ↓
+Context bar shows active roles + locations
+  ↓
+"Edit Preferences" link → /profile
+```
+
+## 14. Logout
 ```
 User clicks logout in header
   ↓

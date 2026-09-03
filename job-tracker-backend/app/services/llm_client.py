@@ -30,7 +30,7 @@ from app.schemas import ATSScoreResponse, EnhancedResumeContent
 
 _MAX_RESUME_CHARS = 15000  # generous - a resume is rarely more than a few thousand words
 _MAX_JOB_DESCRIPTION_CHARS = 8000
-_REQUEST_TIMEOUT_MS = 15000
+_REQUEST_TIMEOUT_MS = 60000
 _MAX_OUTPUT_TOKENS = 8192  # generous headroom - a truncated response is invalid JSON
 
 _CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
@@ -198,49 +198,25 @@ class _SearchQuery(BaseModel):
     query: str
 
 
-def generate_job_search_query(resume_text: str | None = None, profile_context: str | None = None) -> str:
-    """Generates a single, effective job-board search query representing
-    the candidate's strongest, most marketable position - used to
-    auto-populate GET /jobs/suggested without the user having to type
-    anything themselves.
-
-    resume_text (parsed from an uploaded resume) signals what the
-    candidate can actually do; profile_context (the user's self-reported
-    desired role/skills/location/remote/employment-type preferences from
-    GET /profile) signals what they're looking for. Either may be omitted,
-    but at least one must be provided - callers (see app/routers/jobs.py)
-    only reach this function once they've confirmed the user has a resume
-    and/or a profile on file."""
-    if not resume_text and not profile_context:
-        raise ValueError("generate_job_search_query requires resume_text and/or profile_context")
-
+def generate_job_search_query(resume_text: str) -> str:
+    """Reads the user's resume and generates a single, effective job-board
+    search query (role + key skills) representing their strongest,
+    most marketable position - used to auto-populate GET /jobs/suggested
+    without the user having to type anything themselves."""
     api_key = _require_api_key()
 
-    prompt_parts = []
-    if resume_text:
-        prompt_parts.append(f"RESUME:\n{resume_text[:_MAX_RESUME_CHARS]}")
-    if profile_context:
-        prompt_parts.append(f"CANDIDATE STATED PREFERENCES:\n{profile_context}")
-    user_prompt = "\n\n".join(prompt_parts)
+    resume_text = resume_text[:_MAX_RESUME_CHARS]
 
     system_prompt = (
-        "You are a job search assistant. Read the given candidate resume "
-        "and/or stated job preferences and produce a single, effective job "
-        "board search query (2-8 words - typically a job title plus 1-3 "
-        "key skills/qualifiers, e.g. 'Senior Backend Engineer Python "
-        "FastAPI Remote') that best represents this candidate's strongest, "
-        "most marketable, most relevant role. When a resume is given, base "
-        "the role and skills primarily on the candidate's actual "
-        "experience there. When stated preferences are also given, use "
-        "them to refine the query - e.g. prefer their desired job title if "
-        "it's a reasonable fit for their background, append a stated "
-        "location or 'remote', and reflect their experience level or "
-        "employment type (e.g. 'internship', 'contract') if given. If only "
-        "preferences are given (no resume), build the query directly from "
-        "those. This query will be used verbatim to search a live job "
-        "board, so keep it concise and realistic - not a full sentence, "
-        "not a list."
+        "You are a job search assistant. Read the given resume and produce a "
+        "single, effective job board search query (2-6 words - typically a "
+        "job title plus 1-2 key skills, e.g. 'Backend Software Engineer "
+        "Python FastAPI') that best represents this candidate's strongest, "
+        "most marketable role based on their actual experience. This query "
+        "will be used verbatim to search a live job board, so keep it "
+        "concise and realistic - not a full sentence, not a list."
     )
+    user_prompt = f"RESUME:\n{resume_text}"
 
     raw = _call_gemini(api_key, system_prompt, user_prompt, response_schema=_SearchQuery)
 

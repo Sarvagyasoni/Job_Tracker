@@ -47,70 +47,10 @@ def test_suggested_jobs_requires_auth(client):
     assert resp.status_code == 401
 
 
-def test_suggested_jobs_without_resume_or_profile_returns_404(client, register_and_login):
+def test_suggested_jobs_without_resume_returns_404(client, register_and_login):
     _, headers = register_and_login()
     resp = client.get("/jobs/suggested", headers=headers)
     assert resp.status_code == 404
-
-
-def test_suggested_jobs_works_from_profile_alone(client, register_and_login):
-    """A user with no resume but a saved profile should still get
-    suggestions, generated from their stated preferences."""
-    _, headers = register_and_login()
-    resp = client.put(
-        "/profile",
-        headers=headers,
-        json={"desired_role": "Data Analyst", "skills": ["SQL", "Excel"], "remote_preference": "remote"},
-    )
-    assert resp.status_code == 200, resp.text
-
-    with patch(
-        "app.routers.jobs.generate_job_search_query"
-    ) as mock_generate_query, patch(
-        "app.routers.jobs.search_jobs", new=AsyncMock(return_value=[])
-    ) as mock_search:
-        mock_generate_query.return_value = "Data Analyst SQL Remote"
-
-        resp = client.get("/jobs/suggested", headers=headers)
-
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["generated_query"] == "Data Analyst SQL Remote"
-
-    # Called with resume_text=None, profile_context built from the profile
-    call_args, call_kwargs = mock_generate_query.call_args
-    assert call_args[0] is None
-    assert "Data Analyst" in call_kwargs["profile_context"]
-    assert "SQL" in call_kwargs["profile_context"]
-
-    # remote preference should translate into a remote-only search
-    assert mock_search.call_args.kwargs.get("remote_only") is True
-
-
-def test_suggested_jobs_combines_resume_and_profile(client, register_and_login):
-    _, headers = register_and_login()
-    _upload_sample_resume(client, headers)
-    client.put(
-        "/profile",
-        headers=headers,
-        json={"preferred_locations": ["Bangalore"], "experience_level": "mid"},
-    )
-
-    with patch(
-        "app.routers.jobs.generate_job_search_query"
-    ) as mock_generate_query, patch(
-        "app.routers.jobs.search_jobs", new=AsyncMock(return_value=[])
-    ) as mock_search:
-        mock_generate_query.return_value = "Backend Software Engineer Bangalore"
-
-        resp = client.get("/jobs/suggested", headers=headers)
-
-    assert resp.status_code == 200, resp.text
-
-    call_args, call_kwargs = mock_generate_query.call_args
-    # Resume text passed positionally, profile context passed as a kwarg
-    assert "Backend Software Engineer" in call_args[0] or "Jane Doe" in call_args[0]
-    assert "Bangalore" in call_kwargs["profile_context"]
-    assert "mid" in call_kwargs["profile_context"]
 
 
 def test_suggested_jobs_without_configured_key_returns_clean_500(

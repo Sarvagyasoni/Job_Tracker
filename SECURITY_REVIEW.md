@@ -80,8 +80,7 @@ The frontend codebase demonstrates good security practices overall. No critical 
 - External links use `rel="noopener noreferrer"`
 
 ### ✅ 10. File Upload Restrictions
-**Status**: N/A
-- No file upload functionality in frontend
+**Status**: N/A (file upload handled by backend with magic-byte validation)
 
 ### ⚠️ 11. Sensitive Information in Browser Storage
 **Status**: CONCERN
@@ -163,7 +162,12 @@ The frontend codebase demonstrates good security practices overall. No critical 
 ## Detailed Findings
 
 ### Critical Issues
-**None found**
+#### 1. Login 500 from Unapplied Migration (RESOLVED)
+- **Finding**: After adding profile columns to `app/models.py`, the alembic migration was committed but never applied. This caused `POST /auth/login` to return 500 for ALL users.
+- **Impact**: Complete login failure for all users.
+- **Fix**: Ran `alembic upgrade head` to apply the migration.
+- **Prevention**: Any `models.py` change must be accompanied by `alembic upgrade head` before backend restart.
+- **Documented in**: `BACKEND_ISSUES_REPORT.md` Item -1.
 
 ### High Issues
 **None found**

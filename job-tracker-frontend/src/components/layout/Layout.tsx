@@ -24,7 +24,7 @@ function generateParticles(): Particle[] {
   }));
 }
 
-export function Layout() {
+export function Layout({ children }: { children?: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const particles = useMemo(generateParticles, []);
@@ -83,7 +83,7 @@ export function Layout() {
 
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
       <main id="main-content" className={styles.main} role="main">
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
       <Footer />
       <ScrollToTop />

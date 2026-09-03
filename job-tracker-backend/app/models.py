@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Enum as SAEnum,
+    ARRAY,
 )
 from sqlalchemy.orm import relationship
 
@@ -23,27 +24,6 @@ class JobStatus(str, enum.Enum):
     rejected = "rejected"
 
 
-class ExperienceLevel(str, enum.Enum):
-    entry = "entry"
-    mid = "mid"
-    senior = "senior"
-    lead = "lead"
-
-
-class RemotePreference(str, enum.Enum):
-    remote = "remote"
-    hybrid = "hybrid"
-    onsite = "onsite"
-    any = "any"
-
-
-class EmploymentType(str, enum.Enum):
-    full_time = "full_time"
-    part_time = "part_time"
-    contract = "contract"
-    internship = "internship"
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -52,12 +32,26 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+    # --- Profile & job preferences (added 2026-09-02, see
+    # features/profile/README.md) ---
+    # All nullable so existing users can still log in without a profile.
+    # Application-layer validation enforces non-empty for required fields.
+    first_name = Column(String(100), nullable=True)
+    last_name = Column(String(100), nullable=True)
+    preferred_roles = Column(ARRAY(String(25)), nullable=True)
+    preferred_locations = Column(ARRAY(String(25)), nullable=True)
+    work_mode = Column(ARRAY(String(20)), nullable=True)
+    employment_type = Column(ARRAY(String(20)), nullable=True)
+    experience_level = Column(String(20), nullable=True)
+    years_of_experience = Column(String(10), nullable=True)
+    skills = Column(ARRAY(String(50)), nullable=True)
+    minimum_salary_amount = Column(Integer, nullable=True)
+    minimum_salary_currency = Column(String(3), nullable=True)
+    profile_updated_at = Column(DateTime, nullable=True)
+
     jobs = relationship("Job", back_populates="owner", cascade="all, delete-orphan")
     resume = relationship(
         "Resume", back_populates="owner", cascade="all, delete-orphan", uselist=False
-    )
-    profile = relationship(
-        "UserProfile", back_populates="owner", cascade="all, delete-orphan", uselist=False
     )
 
 
@@ -80,46 +74,6 @@ class Resume(Base):
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     owner = relationship("User", back_populates="resume")
-
-
-class UserProfile(Base):
-    """One profile per user: basic identity info plus self-reported job
-    preferences (as opposed to Resume, which stores parsed content from an
-    uploaded file). Feeds GET /jobs/suggested alongside the resume - the
-    resume signals *what the candidate can do*, the profile signals *who
-    they are and what they're looking for*.
-    skills and preferred_locations are stored as comma-separated text
-    (consistent with how Resume keeps things simple by storing plain text
-    rather than a richer structure) and are split/joined into lists at the
-    API boundary in app/routers/profile.py.
-    """
-
-    __tablename__ = "user_profiles"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
-    )
-
-    # Basic identity info
-    full_name = Column(String, nullable=True)
-    phone = Column(String, nullable=True)
-    # Where the candidate currently is - distinct from preferred_locations
-    # below, which is where they'd be willing to WORK (may differ, e.g.
-    # someone based in Mumbai open to relocating to Bangalore/Remote).
-    current_location = Column(String, nullable=True)
-
-    desired_role = Column(String, nullable=True)
-    skills = Column(Text, nullable=True)
-    experience_level = Column(SAEnum(ExperienceLevel, name="experience_level"), nullable=True)
-    preferred_locations = Column(Text, nullable=True)
-    remote_preference = Column(SAEnum(RemotePreference, name="remote_preference"), nullable=True)
-    employment_type = Column(SAEnum(EmploymentType, name="employment_type"), nullable=True)
-
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    owner = relationship("User", back_populates="profile")
 
 
 class Job(Base):

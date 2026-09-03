@@ -231,6 +231,63 @@
 - [ ] Job cards responsive width
 - [ ] Search modal full-width on mobile
 
+## Profile & Preferences Tests
+
+### Registration → Onboarding
+- [ ] Register new user → redirected to `/onboarding` (not `/dashboard`)
+- [ ] Onboarding form shows 2 steps: "About You" + "Job Preferences"
+- [ ] Step 1: fill first_name, last_name → Next
+- [ ] Step 2: add at least 1 role, 1 location → Complete Setup
+- [ ] PUT /users/me/profile called → success → redirect to `/dashboard`
+- [ ] Sidebar shows first name (not email)
+- [ ] Header shows first name (not email)
+
+### Login → Profile Gate
+- [ ] Login with incomplete profile → redirected to `/onboarding`
+- [ ] Login with complete profile → redirected to `/dashboard`
+- [ ] Login with no profile (existing user) → redirected to `/onboarding`
+
+### Profile Edit
+- [ ] Click "Preferences" in sidebar → `/profile` page
+- [ ] Form pre-filled with existing profile data
+- [ ] Edit first_name → Save → toast "Preferences updated"
+- [ ] Edit preferred_roles → add/remove → Save → persists
+- [ ] Cancel → redirect to `/dashboard` without saving
+- [ ] Validation: empty required fields → field errors
+- [ ] Validation: >25 chars per role/location → field error
+- [ ] Validation: >10 roles/locations → field error
+- [ ] Validation: duplicate roles → field error
+
+### Profile Validation Limits
+- [ ] first_name: empty → error, >100 chars → error
+- [ ] last_name: empty → error, >100 chars → error
+- [ ] preferred_roles: empty → error, >10 items → error, >25 chars/item → error
+- [ ] preferred_locations: empty → error, >10 items → error, >25 chars/item → error
+- [ ] skills: >30 items → error, >50 chars/item → error
+- [ ] work_mode: invalid enum value → error
+- [ ] minimum_salary: negative amount → error, invalid currency → error
+
+### Feature Flag
+- [ ] Set `FEATURES.profile = false` → onboarding gate disabled
+- [ ] Set `FEATURES.profile = false` → "Preferences" nav item hidden
+- [ ] Set `FEATURES.profile = false` → Suggestions falls back to resume-based
+
+### Personalized Suggestions
+- [ ] Suggestions page with complete profile → shows context bar with roles/locations
+- [ ] Suggestions page with no profile → shows "Set Preferences" CTA
+- [ ] "Edit Preferences" link → navigates to `/profile`
+- [ ] Suggestions results from cartesian product (roles × locations)
+- [ ] Deduplication: same job from multiple searches shows once
+
+### API
+- [ ] GET /users/me/profile without auth → 401
+- [ ] GET /users/me/profile with no profile → 404
+- [ ] GET /users/me/profile with profile → 200 + full profile
+- [ ] PUT /users/me/profile → upsert (creates if missing, updates if exists)
+- [ ] PUT /users/me/profile with empty required fields → 400
+- [ ] GET /jobs/suggested?use_preferences=true → profile-based search
+- [ ] GET /jobs/suggested?use_preferences=false → resume-based search
+
 ## Error Handling Tests
 - [ ] Network offline → toast "Connection failed"
 - [ ] Backend 500 → toast "Something went wrong"

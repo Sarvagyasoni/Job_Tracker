@@ -7,6 +7,28 @@
 
 ## Critical
 
+### -1. Login 500 caused by unapplied profile migration (2026-09-02)
+**Files:** `alembic/versions/a1b2c3d4e5f6_add_profile_fields_to_users.py`, `app/models.py`
+- **Symptom:** `POST /auth/login` returns 500 (empty body) for ALL users, both existing
+  and new registrations. The frontend login page shows "An unexpected error occurred".
+- **Root cause:** `app/models.py` was updated to add 12 new nullable columns to the
+  `User` model (first_name, last_name, preferred_roles, preferred_locations, work_mode,
+  employment_type, experience_level, years_of_experience, skills,
+  minimum_salary_amount, minimum_salary_currency, profile_updated_at). The matching
+  alembic migration `a1b2c3d4e5f6` was committed but never applied to the live DB.
+  When SQLAlchemy reflects the User table, it expects all 16 columns; the live DB
+  only has 4, so every `SELECT` from `users` fails at the driver layer.
+- **Fix:** Run `alembic upgrade head` from `job-tracker-backend/`. The 12 columns
+  are now present in the live DB and login works (verified end-to-end: register →
+  201, login → 200 with JWT, GET /users/me/profile → 404 for new users, complete
+  onboarding → login → 200 again).
+- **Process gap:** The migration was listed in the feature README's "DB Schema"
+  section but the deploy/run step was not done. **Lesson:** any change to
+  `app/models.py` MUST be accompanied by a fresh alembic migration AND the
+  migration must be applied to the live DB before the backend restarts. Adding
+  a deployment-time check (`alembic current` vs `alembic heads` in a preflight
+  script) would prevent this in the future.
+
 ### 0. Live secrets in working tree
 **File:** `job-tracker-backend/.env`
 - A real `JWT_SECRET`, live `JSEARCH_API_KEY`, and live `GEMINI_API_KEY` are present

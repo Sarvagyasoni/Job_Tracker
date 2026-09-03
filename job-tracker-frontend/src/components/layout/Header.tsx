@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth';
+import { isFeatureEnabled } from '../../config/features';
+import { useFirstName } from '../../features/profile/useProfile';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -12,6 +14,12 @@ export function Header({ onMenuClick }: HeaderProps) {
   const headerRef = useRef<HTMLElement>(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  // Always call the hook to satisfy the Rules of Hooks; the hook itself
+  // is a no-op when the feature flag is off.
+  const profileEnabled = isFeatureEnabled('profile');
+  const firstName = useFirstName();
+  const displayName =
+    (profileEnabled && firstName) || user?.email || 'User';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -76,7 +84,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   <circle cx="12" cy="7" r="4" />
                 </svg>
               </div>
-              <span className={styles.userEmail}>{user?.email || 'User'}</span>
+              <span className={styles.userEmail}>{displayName}</span>
             </div>
             <button
               className={styles.logoutButton}

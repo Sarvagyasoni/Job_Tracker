@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Button, Input } from '../components/common';
+import { isFeatureEnabled } from '../config/features';
 import styles from './AuthPage.module.css';
 
 // Inspire images for card background - pick one randomly on each page load
@@ -83,7 +84,10 @@ export function Register() {
     try {
       const result = await register(email, password);
       if (result.success) {
-        navigate('/dashboard');
+        // New users must complete their profile before accessing the app.
+        // The ProfileGate would also catch this, but sending them straight
+        // to /onboarding avoids a flash of the gate redirect.
+        navigate(isFeatureEnabled('profile') ? '/onboarding' : '/dashboard');
       } else {
         setError(result.error || 'Registration failed');
       }
